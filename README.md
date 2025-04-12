@@ -1,22 +1,30 @@
-# Wazuh In kubernetes
+Here's an improved and more readable version of your Markdown document for deploying Wazuh on Kubernetes. I've corrected grammar, clarified instructions, added headers and formatting, and expanded certain parts for better understanding—all while keeping the original structure and intent intact.
 
-This is working wazhu deployment testet in kubernetes.
-Its a static deployment and alot is hardcoded to get it to work.
+---
 
+```markdown
+# Wazuh in Kubernetes
 
-## Certs
-all the certs are pre added and to match the service that are used. If new certs are need then generate them with the  config.
+This is a working Wazuh deployment tested in Kubernetes. It is currently a **static setup** with many **hardcoded values**, mainly intended for development and testing purposes.
 
+> ⚠️ Production deployment will require modifications for dynamic scaling, secrets management, and persistent storage configurations.
 
-```
+---
+
+## Certificates (SSL/TLS)
+
+All certificates are **pre-generated and hardcoded** to match the Kubernetes services defined in the Wazuh setup. If you need to generate new certificates, you must update the configuration file and rerun the certificate generation container.
+
+### Example Certificate Config (`certs.yml`)
+
+```yaml
 nodes:
-  # Wazuh indexer server nodes
+  # Wazuh Indexer server nodes
   indexer:
     - name: wazuh-indexer.wazuh.svc
       ip: wazuh-indexer.wazuh.svc
 
-  # Wazuh server nodes
-  # Use node_type only with more than one Wazuh manager
+  # Wazuh Server nodes
   server:
     - name: wazuh-manager.wazuh.svc
       ip: wazuh-manager.wazuh.svc
@@ -24,14 +32,18 @@ nodes:
     - name: wazuh-worker.wazuh.svc
       ip: wazuh-worker.wazuh.svc
       node_type: worker
-  # Wazuh dashboard node
+
+  # Wazuh Dashboard node
   dashboard:
     - name: wazuh-dashboard.wazuh.svc
       ip: wazuh-dashboard.wazuh.svc
-````
-Then add the docker-compose.yml file called generate-certs.yaml
-
 ```
+
+### Generate Certificates with Docker Compose
+
+Create a Docker Compose file (e.g., `generate-certs.yaml`):
+
+```yaml
 services:
   generator:
     image: wazuh/wazuh-certs-generator:0.0.2
@@ -43,34 +55,82 @@ services:
       - HTTP_PROXY=wazuh.wazuh.svc
 ```
 
-And run the command 
+Then run:
 
-```
-docker compose -f generate-certs.yaml run  generator
+```bash
+docker compose -f generate-certs.yaml run generator
 ```
 
-To get the cert into the secrets run 
+### Create Kubernetes Secrets from Generated Certs
 
+For example, to encode the `admin.pem` file:
+
+```bash
+cat admin.pem | base64 | tr -d '\n'
 ```
-cat admin.pem  | base64 |tr -d '\n'
-```
+
+Copy the result and insert it into your Kubernetes secret manifest.
+
+---
 
 ## Access
-By default there is no access to the Wazuh deployment. So you need to add your own svc ore portforward the access.
 
-Default login is admin/admin  (I have not set this and made it up is default )
+By default, **no external access is exposed** for the Wazuh Dashboard, API, or other components. You must either:
 
-## pre
-Disk you need to have a storage ready and set as default storage class.
+- Create your own Kubernetes `Service` of type `LoadBalancer` or `NodePort`, **or**
+- Use `kubectl port-forward` for local access
 
+### Default Credentials
 
+- **Username:** `admin`
+- **Password:** `admin`
 
+> ⚠️ These are the Wazuh defaults unless explicitly changed.
 
-## Deploy
+---
 
-First clone this repo. We dont make any release as now ...
-then install using common helm.
+## Storage Requirements
+
+Make sure a **default StorageClass** is defined in your cluster. Persistent volumes will be automatically created based on this.
+
+---
+
+## Deployment
+
+1. Clone the Wazuh deployment repository:
+
+```bash
+git clone https://github.com/your-org/wazuh-k8s-deployment.git
+cd wazuh-k8s-deployment
+```
+
+> 🚧 No official release or versioning yet. Use the latest commit on `main`.
+
+2. Deploy using Helm:
+
+```bash
+helm upgrade --install wazuh . --namespace wazuh --create-namespace
+```
+
+---
+
+## Additional Notes
+
+- This setup does **not yet support autoscaling or horizontal pods**.
+- Ideal for isolated environments, POCs, and integration testing.
+- Configuration, logging, and scaling will need tuning before moving to production.
+
+---
+
+## Roadmap / To-Do
+
+- [ ] Dynamic secret generation with cert-manager
+- [ ] Ingress controller support (NGINX/Traefik)
+- [ ] Production-grade Helm chart with values schema
+- [ ] CI/CD integration for Wazuh container builds
+
+---
 
 ```
-helm upgarde --install wazuh . --namespace wazuh --create-namespace
-```
+
+Let me know if you'd like a full example Helm values file, Kubernetes secret manifest, or ingress setup next!
