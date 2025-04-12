@@ -1,0 +1,54 @@
+#######################################################################
+# Kubernetes Deployment for the Wazuh Logstash container
+#######################################################################
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-logstash
+  namespace: wazuh
+spec:
+  replicas: {{ .Values.logstash.replicas }}
+  selector:
+    matchLabels:
+      app: wazuh-logstash
+  template:
+    metadata:
+      labels:
+        app: wazuh-logstash
+      name: wazuh-logstash
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: logstash.conf
+      containers:
+        - name: wazuh-logstash
+          image: {{ .Values.logstash.image }}
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 1
+              memory: 1.5Gi
+          args:
+            - '-f'
+            - /etc/logstash/conf.d/
+          env:
+            - name: LS_JAVA_OPTS
+              value: '-Xmx1g -Xms512m'
+            - name: XPACK_MONITORING_ENABLED
+              value: 'false'
+            - name: ELASTICSEARCH_URL
+              value: {{ .Values.logstash.elastichosts }}
+            - name: LOGSTASH_OUTPUT
+              value: {{ .Values.logstash.elastichosts }}
+
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: config
+              mountPath: /etc/logstash/conf.d/logstash.conf
+              subPath: logstash.conf
+              readOnly: true

@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: wazuh-manager-worker-0
+  namespace: wazuh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wazuh-manager
+      node-type: worker
+      sts-id: '0'
+  serviceName: wazuh-cluster
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: wazuh-manager
+        node-type: worker
+        sts-id: '0'
+      name: wazuh-manager-worker-0
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: sts-id
+                      operator: In
+                      values:
+                        - '1'
+                topologyKey: kubernetes.io/hostname
+      volumes:
+        - name: config
+          configMap:
+            name: wazuh-manager-worker-0-conf
+        - name: wazuh-worker-master
+          persistentVolumeClaim:
+            claimName: wazuh-worker-0
+        - name: wazuh-worker
+          secret:
+            secretName: wazuh-worker
+        - name: wazuh-root
+          secret:
+            secretName: wazuh-root
+        - name: wazuh-filebeat
+          persistentVolumeClaim:
+            claimName: wazuh-worker-filebeat
+      containers:
+        - name: wazuh-manager
+          image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
+          env:    
+            - name: INDEXER_URL
+              value: https://wazuh-indexer.wazuh.svc:9200
+            - name: INDEXER_USERNAME
+              value: admin
+            - name: INDEXER_PASSWORD
+              value: admin
+            - name: FILEBEAT_SSL_VERIFICATION_MODE
+              value: full
+            - name: SSL_CERTIFICATE_AUTHORITIES
+              value: /etc/ssl/root-ca.pem
+            - name: SSL_CERTIFICATE
+              value: /etc/ssl/filebeat.pem
+            - name: SSL_KEY
+              value: /etc/ssl/filebeat.key   
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1024Mi
+            limits:
+              cpu: 500m
+              memory: 2048Mi
+          volumeMounts:
+            - name: config
+              mountPath: /wazuh-config-mount/etc/ossec.conf
+              subPath: ossec.conf
+              readOnly: true
+            - name: wazuh-worker-master
+              subPath: api/configuration
+              mountPath: /var/ossec/api/configuration 
+            - name: wazuh-worker-master
+              subPath: etc
+              mountPath: /var/ossec/etc  
+            - name: wazuh-worker-master
+              subPath: logs
+              mountPath: /var/ossec/logs
+            - name: wazuh-worker-master
+              subPath: queue
+              mountPath: /var/ossec/queue
+            - name: wazuh-worker-master
+              subPath: multigroups
+              mountPath: /var/ossec/multigroups
+            - name: wazuh-worker-master
+              subPath: integrations
+              mountPath: /var/ossec/integrations
+            - name: wazuh-worker-master
+              subPath: active-response/bin
+              mountPath: /var/ossec/active-response/bin
+            - name: wazuh-worker-master
+              subPath: agentless
+              mountPath: /var/ossec/agentless
+            - name: wazuh-worker-master
+              subPath: wodles
+              mountPath: /var/ossec/wodles
+            - name: wazuh-filebeat
+              subPath: etc
+              mountPath: /etc/filebeat
+            - name: wazuh-filebeat
+              subPath: var
+              mountPath: /var/lib/filebeat
+            - name: wazuh-worker
+              mountPath: /etc/ssl/filebeat.key
+              subPath: wazuh-worker.wazuh.svc-key.pem
+              readOnly: true
+            - name: wazuh-worker
+              mountPath: /etc/ssl/filebeat.pem
+              subPath: wazuh-worker.wazuh.svc.pem
+              readOnly: true
+            - name: wazuh-root
+              mountPath: /etc/ssl/root-ca.pem
+              subPath: root-ca-manager.pem
+              readOnly: true
+          ports:
+            - containerPort: 1514
+              name: agents-events
+            - containerPort: 1516
+              name: cluster
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wazuh-worker-0
+  namespace: wazuh
+  labels:
+    app: wazuh-worker-0
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+status: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wazuh-worker-filebeat
+  namespace: wazuh
+  labels:
+    app: wazuh-worker-0
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+status: {}

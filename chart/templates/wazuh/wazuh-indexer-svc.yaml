@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-indexer  # Don't change, unless you update the Wazuh Kibana app config
+  namespace: wazuh
+  labels:
+      app: wazuh-indexer
+      node-type: index
+  annotations:
+spec:
+  type: ClusterIP
+  selector:
+      app: wazuh-indexer
+      node-type: index
+  ports:
+    - name: opensearch
+      port: 9200
+      targetPort: 9200
+
+    

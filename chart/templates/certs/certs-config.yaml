@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: certs-yaml
+  namespace: wazuh
+data:
+  certs-yml: |-
+    nodes:
+      # Wazuh indexer server nodes
+      indexer:
+        - name: wazuh-indexer.wazuh.svc
+          ip: wazuh-indexer.wazuh.svc
+
+      # Wazuh server nodes
+      # Use node_type only with more than one Wazuh manager
+      server:
+        - name: wazuh-manager.wazuh.svc
+          ip: wazuh-manager.wazuh.svc
+
+      # Wazuh dashboard node
+      dashboard:
+        - name: wazuh-dashboard.wazuh.svc
+          ip: wazuh-dashboard.wazuh.svc

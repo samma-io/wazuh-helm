@@ -1,0 +1,3 @@
+cluster: int
+wazuh:
+  tag: 4.10.1

@@ -1,0 +1,104 @@
+#######################################################################
+# Kubernetes StatefulSet for the Wazuh manager master node
+#
+# We deploy only one replica here because Wazuh is not yet supporting
+# a multi-master setup
+#######################################################################
+
+apiVersion: apps/v1beta2
+kind: StatefulSet
+metadata:
+  name: wazuh-manager-master
+  namespace: wazuh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wazuh-manager
+      wazuh-manager-role: master
+  serviceName: wazuh-master
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: wazuh-manager
+        wazuh-manager-role: master
+      name: wazuh-manager-master
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: wazuh-manager-master-conf
+      containers:
+        - name: wazuh-manager
+          image: wazuh/wazuh-manager:5.0.0
+          resources:
+            requests:
+              cpu: 500m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
+          env:
+            - name: INDEXER_URL
+              value: https://wazuh.indexer:9200
+            - name: INDEXER_USERNAME 
+              value: admin
+            - name: INDEXER_PASSWORD
+              value: admin
+            - name: FILEBEAT_SSL_VERIFICATION_MODE
+              value: full
+            - name: SSL_CERTIFICATE_AUTHORITIES
+              value: /etc/ssl/root-ca.pem
+            - name: SSL_CERTIFICATE
+              value: /etc/ssl/filebeat.pem
+            - name: SSL_KEY
+              value: /etc/ssl/filebeat.key
+            - name: API_USERNAME
+              value: wazuh-wui
+            - name: API_PASSWORD
+              value: MyS3cr37P450r.*-           
+          volumeMounts:
+            - name: wazuh
+              mountPath: /var/ossec/
+            - name: filebeat_etc
+              mountPath: /etc/filebeat
+            - name: filebeat_var
+              mountPath: /var/lib/filebeat
+            - name: config
+              mountPath: /wazuh-config-mount/etc/ossec.conf
+              subPath: ossec.conf
+          ports:
+            - containerPort: 1514
+            - containerPort: 1515
+            - containerPort: 1516
+            - containerPort: 55000
+  volumeClaimTemplates:
+    - metadata:
+        name: wazuh
+        namespace: wazuh
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+
+    - metadata:
+        name: filebeat_etc
+        namespace: wazuh
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+    - metadata:
+        name: filebeat_var
+        namespace: wazuh
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi

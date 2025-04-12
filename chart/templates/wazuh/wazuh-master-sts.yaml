@@ -1,0 +1,158 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: wazuh-manager-master
+  namespace: wazuh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wazuh-manager
+      node-type: master
+  serviceName: wazuh-cluster
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: wazuh-manager
+        node-type: master
+      name: wazuh-manager-master
+    spec:   
+      containers:
+        - name: wazuh-manager
+          image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
+          env:
+            - name: INDEXER_URL
+              value: https://wazuh-indexer.wazuh.svc:9200
+            - name: INDEXER_USERNAME
+              value : admin
+            - name: INDEXER_PASSWORD
+              value: admin
+            - name: FILEBEAT_SSL_VERIFICATION_MODE
+              value: full
+            - name: SSL_CERTIFICATE_AUTHORITIES
+              value: /etc/ssl/root-ca.pem
+            - name: SSL_CERTIFICATE
+              value: /etc/ssl/filebeat.pem
+            - name: SSL_KEY
+              value: /etc/ssl/filebeat.key
+            - name: API_USERNAME
+              value: wazuh-wui
+            - name: API_PASSWORD
+              value: MyS3cr37P450r.*-
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1024Mi
+            limits:
+              cpu: 500m
+              memory: 2048Mi
+          volumeMounts:
+            - name: config
+              mountPath: /wazuh-config-mount/etc/ossec.conf
+              subPath: ossec.conf
+              readOnly: true
+            - name: wazuh-register-key
+              mountPath: /var/ossec/etc/authd.pass
+              subPath: authd.pass
+              readOnly: true
+            - name: wazuh-manager-master
+              subPath: api/configuration
+              mountPath: /var/ossec/api/configuration 
+            - name: wazuh-manager-master
+              subPath: etc
+              mountPath: /var/ossec/etc  
+            - name: wazuh-manager-master
+              subPath: logs
+              mountPath: /var/ossec/logs
+            - name: wazuh-manager-master
+              subPath: queue
+              mountPath: /var/ossec/queue
+            - name: wazuh-manager-master
+              subPath: multigroups
+              mountPath: /var/ossec/multigroups
+            - name: wazuh-manager-master
+              subPath: integrations
+              mountPath: /var/ossec/integrations
+            - name: wazuh-manager-master
+              subPath: active-response/bin
+              mountPath: /var/ossec/active-response/bin
+            - name: wazuh-manager-master
+              subPath: agentless
+              mountPath: /var/ossec/agentless
+            - name: wazuh-manager-master
+              subPath: wodles
+              mountPath: /var/ossec/wodles
+            - name: wazuh-filebeat
+              subPath: etc
+              mountPath: /etc/filebeat
+            - name: wazuh-filebeat
+              subPath: var
+              mountPath: /var/lib/filebeat
+            - name: wazuh-manager
+              mountPath: /etc/ssl/filebeat.key
+              subPath: wazuh-manager.wazuh.svc-key.pem
+              readOnly: true
+            - name: wazuh-manager
+              mountPath: /etc/ssl/filebeat.pem
+              subPath: wazuh-manager.wazuh.svc.pem
+              readOnly: true
+            - name: wazuh-root
+              mountPath: /etc/ssl/root-ca.pem
+              subPath: root-ca-manager.pem
+              readOnly: true
+          ports:
+            - containerPort: 1515
+              name: registration
+            - containerPort: 1516
+              name: cluster
+            - containerPort: 55000
+              name: api
+      volumes:
+      - name: wazuh-manager-master
+        persistentVolumeClaim:
+          claimName: wazuh-manager-master
+      - name: wazuh-filebeat
+        persistentVolumeClaim:
+          claimName: wazuh-manager-filebeat
+      - name: config
+        configMap:
+          name: wazuh-manager-master-conf
+      - name: wazuh-register-key
+        configMap:
+          name: wazuh-register-key
+      - name: wazuh-manager
+        secret:
+          secretName: wazuh-manager
+      - name: wazuh-root
+        secret:
+          secretName: wazuh-root
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wazuh-manager-master
+  namespace: wazuh
+  labels:
+    app: wazuh-manager-master
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wazuh-manager-filebeat
+  namespace: wazuh
+  labels:
+    app: wazuh-manager-master
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+status: {}
