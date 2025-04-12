@@ -1,8 +1,4 @@
-Here's an improved and more readable version of your Markdown document for deploying Wazuh on Kubernetes. I've corrected grammar, clarified instructions, added headers and formatting, and expanded certain parts for better understanding—all while keeping the original structure and intent intact.
 
----
-
-```markdown
 # Wazuh in Kubernetes
 
 This is a working Wazuh deployment tested in Kubernetes. It is currently a **static setup** with many **hardcoded values**, mainly intended for development and testing purposes.
