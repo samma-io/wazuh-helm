@@ -12,6 +12,7 @@ This is a working Wazuh deployment tested in Kubernetes. It is currently a **sta
 This deploymedn need to be install in en k8s cluster before this chart
 
 - CertManager
+- Defaultstorge class
 - Only work in en wazuh namespace
 
 
