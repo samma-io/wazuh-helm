@@ -17,7 +17,19 @@ spec:
         app: wazuh-manager
         node-type: master
       name: wazuh-manager-master
-    spec:   
+    spec:
+      initContainers:
+      - name: volume-mount-hack
+        image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
+        command: ["/bin/sh", "-c"]
+        args:
+          - chown -R wazuh:wazuh /var/ossec/;
+            mkdir -p /var/ossec/etc/shared/;
+            echo "#clean" > /var/ossec/etc/shared/ar.conf;
+
+        volumeMounts:
+        - name: wazuh-manager-master
+          mountPath: /var/ossec/  
       containers:
         - name: wazuh-manager
           image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
@@ -91,15 +103,15 @@ spec:
               mountPath: /var/lib/filebeat
             - name: wazuh-manager
               mountPath: /etc/ssl/filebeat.key
-              subPath: wazuh-manager.wazuh.svc-key.pem
+              subPath: tls.key
               readOnly: true
             - name: wazuh-manager
               mountPath: /etc/ssl/filebeat.pem
-              subPath: wazuh-manager.wazuh.svc.pem
+              subPath: tls.crt
               readOnly: true
             - name: wazuh-root
               mountPath: /etc/ssl/root-ca.pem
-              subPath: root-ca-manager.pem
+              subPath: ca.crt
               readOnly: true
           ports:
             - containerPort: 1515
@@ -108,6 +120,8 @@ spec:
               name: cluster
             - containerPort: 55000
               name: api
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
       volumes:
       - name: wazuh-manager-master
         persistentVolumeClaim:
@@ -126,7 +140,7 @@ spec:
           secretName: wazuh-manager
       - name: wazuh-root
         secret:
-          secretName: wazuh-root
+          secretName: wazuh-rootca-certificate
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

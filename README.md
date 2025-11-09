@@ -9,64 +9,8 @@ This is a working Wazuh deployment tested in Kubernetes. It is currently a **sta
 
 ## Certificates (SSL/TLS)
 
-All certificates are **pre-generated and hardcoded** to match the Kubernetes services defined in the Wazuh setup. If you need to generate new certificates, you must update the configuration file and rerun the certificate generation container.
-
-### Example Certificate Config (`certs.yml`)
-
-```yaml
-nodes:
-  # Wazuh Indexer server nodes
-  indexer:
-    - name: wazuh-indexer.wazuh.svc
-      ip: wazuh-indexer.wazuh.svc
-
-  # Wazuh Server nodes
-  server:
-    - name: wazuh-manager.wazuh.svc
-      ip: wazuh-manager.wazuh.svc
-      node_type: master  
-    - name: wazuh-worker.wazuh.svc
-      ip: wazuh-worker.wazuh.svc
-      node_type: worker
-
-  # Wazuh Dashboard node
-  dashboard:
-    - name: wazuh-dashboard.wazuh.svc
-      ip: wazuh-dashboard.wazuh.svc
-```
-
-### Generate Certificates with Docker Compose
-
-Create a Docker Compose file (e.g., `generate-certs.yaml`):
-
-```yaml
-services:
-  generator:
-    image: wazuh/wazuh-certs-generator:0.0.2
-    hostname: wazuh-certs-generator
-    volumes:
-      - ./config/wazuh_indexer_ssl_certs/:/certificates/
-      - ./config/certs.yml:/config/certs.yml
-    environment:
-      - HTTP_PROXY=wazuh.wazuh.svc
-```
-
-Then run:
-
-```bash
-docker compose -f generate-certs.yaml run generator
-```
-
-### Create Kubernetes Secrets from Generated Certs
-
-For example, to encode the `admin.pem` file:
-
-```bash
-cat admin.pem | base64 | tr -d '\n'
-```
-
-Copy the result and insert it into your Kubernetes secret manifest.
-
+All certificate are setupo using Cert manager and you need to have it install in the cluster for the certs to be installed.
+All certs are then setup to the right pod fir usage
 ---
 
 ## Access
@@ -76,12 +20,24 @@ By default, **no external access is exposed** for the Wazuh Dashboard, API, or o
 - Create your own Kubernetes `Service` of type `LoadBalancer` or `NodePort`, **or**
 - Use `kubectl port-forward` for local access
 
+### Dashbord
+The dashboard is exposed using a nodeport and you can access it over https.
+
+https://10.0.0.33:30272/
+
 ### Default Credentials
 
 - **Username:** `admin`
 - **Password:** `admin`
 
 > ⚠️ These are the Wazuh defaults unless explicitly changed.
+
+
+### Manager
+Manager access is open with a loadbalancer. This is where you will be usingh to connect your clients.
+
+
+
 
 ---
 

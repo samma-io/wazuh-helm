@@ -18,7 +18,17 @@ spec:
         app: wazuh-indexer
         node-type: index
       name: wazuh-indexer
-    spec:   
+    spec:
+      initContainers:
+      - name: volume-mount-hack
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args:
+          - chown 1000:1000 /var/lib/wazuh-indexer;
+            chmod 774 /var/lib/wazuh-indexer;
+        volumeMounts:
+        - name: wazuh-indexer-data
+          mountPath: /var/lib/wazuh-indexer 
       containers:
         - name: wazuh-indexer
           image: wazuh/wazuh-indexer:{{ .Values.wazuh.tag }}
@@ -86,27 +96,31 @@ spec:
             limits:
               cpu: 500m
               memory: 2048Mi
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000         
           volumeMounts:
             -  name: opensearch-yml
-               mountPath: /usr/share/wazuh-indexer/opensearch.yml
+               mountPath: /usr/share/wazuh-indexer/config/opensearch.yml
                subPath: opensearch.yml
             - name: wazuh-indexer-data
               mountPath: /var/lib/wazuh-indexer
             - name: wazuh-root
-              mountPath: /usr/share/wazuh-indexer/certs/root-ca.pem
-              subPath: root-ca.pem
+              mountPath: /usr/share/wazuh-indexer/config/certs/root-ca.pem
+              subPath: ca.crt
             - name: wazuh-indexer
-              subPath: wazuh-indexer.wazuh.svc-key.pem
-              mountPath: /usr/share/wazuh-indexer/certs/wazuh.indexer.key
+              subPath: tls.key
+              mountPath: /usr/share/wazuh-indexer/config/certs/wazuh.indexer.key
             - name: wazuh-indexer
-              mountPath: /usr/share/wazuh-indexer/certs/wazuh.indexer.pem
-              subPath: wazuh-indexer.wazuh.svc.pem
+              mountPath: /usr/share/wazuh-indexer/config/certs/wazuh.indexer.pem
+              subPath: tls.crt
             - name: wazuh-admin
-              mountPath: /usr/share/wazuh-indexer/certs/admin.pem
-              subPath: admin.pem
+              mountPath: /usr/share/wazuh-indexer/config/certs/admin.pem
+              subPath: tls.crt
             - name: wazuh-admin
-              mountPath: /usr/share/wazuh-indexer/certs/admin-key.pem
-              subPath: admin-key.pem
+              mountPath: /usr/share/wazuh-indexer/config/certs/admin-key.pem
+              subPath: tls.key
           ports:
             - containerPort: 1515
               name: registration
@@ -114,6 +128,8 @@ spec:
               name: cluster
             - containerPort: 55000
               name: api
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
       volumes:
       - name: wazuh-indexer-data
         persistentVolumeClaim:
@@ -122,12 +138,15 @@ spec:
         configMap:
           name: opensearch-yml
       - name: wazuh-root
+        defaultMode: 0666
         secret:
-          secretName: wazuh-root
+          secretName: wazuh-rootca-certificate
       - name: wazuh-indexer
+        defaultMode: 0666
         secret:
           secretName: wazuh-indexer
       - name: wazuh-admin
+        defaultMode: 0666
         secret:
           secretName: wazuh-admin
 ---

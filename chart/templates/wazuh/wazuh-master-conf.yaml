@@ -12,6 +12,8 @@ metadata:
   name: wazuh-manager-master-conf
   namespace: wazuh
 data:
+  ar.conf: |-
+    #dead
   ossec.conf: |-
       <ossec_config>
       <global>

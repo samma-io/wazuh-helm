@@ -17,7 +17,23 @@ spec:
         app: wazuh-dashboard
         node-type: dashboard
       name: wazuh-dashboard
-    spec:   
+    spec:
+      initContainers:
+      - name: volume-mount-hack
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args:
+          - chown 1000:1000 /usr/share/wazuh-dashboard/data/wazuh/config;
+            chmod 774 /usr/share/wazuh-dashboard/data/wazuh/config;
+            chown 1000:1000 /usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom/;
+            chmod 774 /usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom/;
+        volumeMounts:
+            - name: wazuh-dashboard-data
+              mountPath: /usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom
+              subPath: assets
+            - name: wazuh-dashboard-data
+              mountPath: /usr/share/wazuh-dashboard/data/wazuh/config
+              subPath: config
       containers:
         - name: wazuh-dashboard
           image: wazuh/wazuh-dashboard:{{ .Values.wazuh.tag }}
@@ -37,7 +53,7 @@ spec:
             - name: SERVER_PORT
               value: "5601"
             - name: OPENSEARCH_HOSTS
-              value: "https://wazuh.indexer:9200"
+              value: "https://wazuh-indexer.wazuh.svc:9200"
             - name: OPENSEARCH_SSL_VERIFICATIONMODE
               value: certificate
             - name: OPENSEARCH_REQUESTHEADERSALLOWLIST
@@ -73,16 +89,18 @@ spec:
               subPath: assets
             - name: wazuh-root
               mountPath: /usr/share/wazuh-dashboard/certs/root-ca.pem
-              subPath: root-ca.pem
+              subPath: ca.crt
             - name: wazuh-dashboard
-              subPath: wazuh-dashboard.wazuh.svc-key.pem
+              subPath: tls.key
               mountPath: /usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem
             - name: wazuh-dashboard
               mountPath: /usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem
-              subPath: wazuh-dashboard.wazuh.svc.pem
+              subPath: tls.crt
           ports:
             - containerPort: 5601
               name: kibana
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
       volumes:
       - name: wazuh-dasboard-config
         configMap:
@@ -92,7 +110,7 @@ spec:
           secretName: wazuh-dashboard
       - name: wazuh-root
         secret:
-          secretName: wazuh-root
+          secretName: wazuh-rootca-certificate
       - name: wazuh-dashboard-data
         persistentVolumeClaim:
           claimName: wazuh-dashboard-data
