@@ -12,6 +12,7 @@ This is a working Wazuh deployment tested in Kubernetes. It is currently a **sta
 This deploymedn need to be install in en k8s cluster before this chart
 
 - CertManager
+- Only work in en wazuh namespace
 
 
 ## Certificates (SSL/TLS)
@@ -58,8 +59,8 @@ Make sure a **default StorageClass** is defined in your cluster. Persistent volu
 1. Clone the Wazuh deployment repository:
 
 ```bash
-git clone https://github.com/your-org/wazuh-k8s-deployment.git
-cd wazuh-k8s-deployment
+git clone https://github.com/samma-io/wazuh-helm
+cd wazuh-helm/chart
 ```
 
 > 🚧 No official release or versioning yet. Use the latest commit on `main`.
