@@ -7,11 +7,17 @@ This is a working Wazuh deployment tested in Kubernetes. It is currently a **sta
 
 ---
 
-## Certificates (SSL/TLS)
 
+## Req
+This deploymedn need to be install in en k8s cluster before this chart
+
+- CertManager
+
+
+## Certificates (SSL/TLS)
 All certificate are setupo using Cert manager and you need to have it install in the cluster for the certs to be installed.
 All certs are then setup to the right pod fir usage
----
+
 
 ## Access
 
