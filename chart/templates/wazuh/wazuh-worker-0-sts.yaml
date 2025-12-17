@@ -9,7 +9,7 @@ spec:
     matchLabels:
       app: wazuh-manager
       node-type: worker
-      sts-id: '0'
+      sts-id: "0"
   serviceName: wazuh-cluster
   podManagementPolicy: Parallel
   template:
@@ -17,7 +17,7 @@ spec:
       labels:
         app: wazuh-manager
         node-type: worker
-        sts-id: '0'
+        sts-id: "0"
       name: wazuh-manager-worker-0
     spec:
       affinity:
@@ -30,7 +30,7 @@ spec:
                     - key: sts-id
                       operator: In
                       values:
-                        - '1'
+                        - "1"
                 topologyKey: kubernetes.io/hostname
       volumes:
         - name: config
@@ -48,29 +48,38 @@ spec:
         - name: wazuh-filebeat
           persistentVolumeClaim:
             claimName: wazuh-worker-filebeat
+        - name: wazuh-auth
+          secret:
+            secretName: wazuh-auth
       nodeSelector:
         beta.kubernetes.io/arch: amd64
       initContainers:
-      - name: volume-mount-hack
-        image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
-        command: ["/bin/sh", "-c"]
-        args:
-          - chown -R wazuh:wazuh /var/ossec/;
-            mkdir -p /var/ossec/etc/shared/;
-            echo "#clean" > /var/ossec/etc/shared/ar.conf;
-        volumeMounts:
-        - name: wazuh-worker-master
-          mountPath: /var/ossec/ 
+        - name: volume-mount-hack
+          image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - chown -R wazuh:wazuh /var/ossec/;
+              mkdir -p /var/ossec/etc/shared/;
+              echo "#clean" > /var/ossec/etc/shared/ar.conf;
+          volumeMounts:
+            - name: wazuh-worker-master
+              mountPath: /var/ossec/
       containers:
         - name: wazuh-manager
           image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
-          env:    
+          env:
             - name: INDEXER_URL
-              value: https://wazuh-indexer.wazuh.svc:9200
+              value: https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200
             - name: INDEXER_USERNAME
-              value: admin
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-indexer-secret
+                  key: username
             - name: INDEXER_PASSWORD
-              value: admin
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-indexer-secret
+                  key: password
             - name: FILEBEAT_SSL_VERIFICATION_MODE
               value: full
             - name: SSL_CERTIFICATE_AUTHORITIES
@@ -78,7 +87,7 @@ spec:
             - name: SSL_CERTIFICATE
               value: /etc/ssl/filebeat.pem
             - name: SSL_KEY
-              value: /etc/ssl/filebeat.key   
+              value: /etc/ssl/filebeat.key
           resources:
             requests:
               cpu: 200m
@@ -93,10 +102,10 @@ spec:
               readOnly: true
             - name: wazuh-worker-master
               subPath: api/configuration
-              mountPath: /var/ossec/api/configuration 
+              mountPath: /var/ossec/api/configuration
             - name: wazuh-worker-master
               subPath: etc
-              mountPath: /var/ossec/etc  
+              mountPath: /var/ossec/etc
             - name: wazuh-worker-master
               subPath: logs
               mountPath: /var/ossec/logs
@@ -135,6 +144,10 @@ spec:
             - name: wazuh-root
               mountPath: /etc/ssl/root-ca.pem
               subPath: ca.crt
+              readOnly: true
+            - name: wazuh-auth
+              mountPath: /var/ossec/etc/authd.pass
+              subPath: authd.pass
               readOnly: true
           ports:
             - containerPort: 1514

@@ -19,15 +19,15 @@ spec:
       name: wazuh-dashboard
     spec:
       initContainers:
-      - name: volume-mount-hack
-        image: busybox
-        command: ["/bin/sh", "-c"]
-        args:
-          - chown 1000:1000 /usr/share/wazuh-dashboard/data/wazuh/config;
-            chmod 774 /usr/share/wazuh-dashboard/data/wazuh/config;
-            chown 1000:1000 /usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom/;
-            chmod 774 /usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom/;
-        volumeMounts:
+        - name: volume-mount-hack
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+            - chown 1000:1000 /usr/share/wazuh-dashboard/data/wazuh/config;
+              chmod 774 /usr/share/wazuh-dashboard/data/wazuh/config;
+              chown 1000:1000 /usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom/;
+              chmod 774 /usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom/;
+          volumeMounts:
             - name: wazuh-dashboard-data
               mountPath: /usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom
               subPath: assets
@@ -39,21 +39,33 @@ spec:
           image: wazuh/wazuh-dashboard:{{ .Values.wazuh.tag }}
           env:
             - name: WAZUH_API_URL
-              value: "https://wazuh-manager.wazuh.svc"
+              value: "https://wazuh-manager.{{ .Release.Namespace }}.svc"
             - name: DASHBOARD_USERNAME
-              value: kibanaserver
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-dashboard-secret
+                  key: username
             - name: DASHBOARD_PASSWORD
-              value: kibanaserver
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-dashboard-secret
+                  key: password
             - name: API_USERNAME
-              value: wazuh-wui
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-dashboard-secret
+                  key: api-username
             - name: API_PASSWORD
-              value: "MyS3cr37P450r.*-"
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-dashboard-secret
+                  key: api-password
             - name: SERVER_HOST
               value: "0.0.0.0"
             - name: SERVER_PORT
               value: "5601"
             - name: OPENSEARCH_HOSTS
-              value: "https://wazuh-indexer.wazuh.svc:9200"
+              value: "https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200"
             - name: OPENSEARCH_SSL_VERIFICATIONMODE
               value: certificate
             - name: OPENSEARCH_REQUESTHEADERSALLOWLIST
@@ -102,18 +114,18 @@ spec:
       nodeSelector:
         beta.kubernetes.io/arch: amd64
       volumes:
-      - name: wazuh-dasboard-config
-        configMap:
-          name: wazuh-dashboard-conf
-      - name: wazuh-dashboard
-        secret:
-          secretName: wazuh-dashboard
-      - name: wazuh-root
-        secret:
-          secretName: wazuh-rootca-certificate
-      - name: wazuh-dashboard-data
-        persistentVolumeClaim:
-          claimName: wazuh-dashboard-data
+        - name: wazuh-dasboard-config
+          configMap:
+            name: wazuh-dashboard-conf
+        - name: wazuh-dashboard
+          secret:
+            secretName: wazuh-dashboard
+        - name: wazuh-root
+          secret:
+            secretName: wazuh-rootca-certificate
+        - name: wazuh-dashboard-data
+          persistentVolumeClaim:
+            claimName: wazuh-dashboard-data
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

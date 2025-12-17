@@ -1,3 +1,14 @@
 cluster: int
+
 wazuh:
   tag: 4.14.0
+
+secrets:
+  authdPassword: "ChangeMe123!"
+  apiUsername: "wazuh-api"
+  apiPassword: "ChangeMe456!"
+  indexerUsername: "admin"
+  indexerPassword: "ChangeMe789!"
+  dashboardUsername: "admin"
+  dashboardPassword: "ChangeMe012!"
+  clusterKey: "c98b6ha9b6169zc5f67rae55ae4z5647" # Generate new one
