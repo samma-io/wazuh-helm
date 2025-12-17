@@ -4,11 +4,11 @@ wazuh:
   tag: 4.14.0
 
 secrets:
-  authdPassword: "ChangeMe123!"
+  authdPassword: "AuthPassword!"
   apiUsername: "wazuh-api"
-  apiPassword: "ChangeMe456!"
+  apiPassword: "ApiPass123!"
   indexerUsername: "admin"
-  indexerPassword: "ChangeMe789!"
+  indexerPassword: "IndexerPass123!"
   dashboardUsername: "admin"
-  dashboardPassword: "ChangeMe012!"
-  clusterKey: "c98b6ha9b6169zc5f67rae55ae4z5647" # Generate new one
+  dashboardPassword: "DashboardPass123!"
+  clusterKey: "c98b6ha9b6169zc5f67rae55ae4z5647"
