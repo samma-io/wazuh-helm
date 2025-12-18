@@ -2,22 +2,22 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: wazuh-indexer
-  namespace: wazuh
+  name: {{ .Release.Name }}-indexer
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: wazuh-indexer
+      app: {{ .Release.Name }}-indexer
       node-type: index
   serviceName: wazuh-cluster
   podManagementPolicy: Parallel
   template:
     metadata:
       labels:
-        app: wazuh-indexer
+        app: {{ .Release.Name }}-wazuh-indexer
         node-type: index
-      name: wazuh-indexer
+      name: {{ .Release.Name }}-indexer
     spec:
       initContainers:
       - name: volume-mount-hack
