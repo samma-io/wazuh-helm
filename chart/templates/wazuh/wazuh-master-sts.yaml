@@ -136,8 +136,6 @@ spec:
               name: cluster
             - containerPort: 55000
               name: api
-      nodeSelector:
-        beta.kubernetes.io/arch: amd64
       volumes:
         - name: wazuh-manager-master
           persistentVolumeClaim:

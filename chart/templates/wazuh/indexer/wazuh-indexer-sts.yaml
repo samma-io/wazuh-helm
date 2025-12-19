@@ -1,0 +1,217 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-indexer
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-indexer
+      node-type: index
+  serviceName: wazuh-cluster
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-indexer
+        node-type: index
+      name: {{ .Release.Name }}-indexer
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: "OnRootMismatch"
+      containers:
+        - name: wazuh-indexer
+          image: wazuh/wazuh-indexer:{{ .Values.wazuh.tag }}
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # JVM Settings
+            - name: OPENSEARCH_JAVA_OPTS
+              value: "-Xms1g -Xmx1g"
+            - name: bootstrap.memory_lock
+              value: "true"
+            
+            # Node Settings
+            - name: node.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: cluster.name
+              value: "wazuh-cluster"
+            - name: node.max_local_storage_nodes
+              value: "1"
+            
+            # Network
+            - name: network.host
+              value: "0.0.0.0"
+            - name: http.port
+              value: "9200"
+            - name: transport.port  # Fixed: updated from transport.tcp.port
+              value: "9300"
+            
+            # Compatibility
+            - name: compatibility.override_main_response_version
+              value: "true"
+            
+            # SSL/TLS HTTP
+            - name: plugins.security.ssl.http.enabled
+              value: "true"
+            - name: plugins.security.ssl.http.pemcert_filepath
+              value: "/usr/share/wazuh-indexer/config/certs/wazuh.indexer.pem"
+            - name: plugins.security.ssl.http.pemkey_filepath
+              value: "/usr/share/wazuh-indexer/config/certs/wazuh.indexer.key"
+            - name: plugins.security.ssl.http.pemtrustedcas_filepath
+              value: "/usr/share/wazuh-indexer/config/certs/root-ca.pem"
+            
+            # SSL/TLS Transport
+            - name: plugins.security.ssl.transport.pemcert_filepath
+              value: "/usr/share/wazuh-indexer/config/certs/wazuh.indexer.pem"
+            - name: plugins.security.ssl.transport.pemkey_filepath
+              value: "/usr/share/wazuh-indexer/config/certs/wazuh.indexer.key"
+            - name: plugins.security.ssl.transport.pemtrustedcas_filepath
+              value: "/usr/share/wazuh-indexer/config/certs/root-ca.pem"
+            - name: plugins.security.ssl.transport.enforce_hostname_verification
+              value: "false"
+            - name: plugins.security.ssl.transport.resolve_hostname
+              value: "false"
+            
+            # Security - DNs
+            - name: plugins.security.nodes_dn
+              value: "CN=wazuh.indexer,OU=Wazuh,O=Wazuh,L=California,C=US"
+            - name: plugins.security.authcz.admin_dn
+              value: "CN=admin,OU=Wazuh,O=Wazuh,L=California,C=US"
+            
+            # Security - General
+            - name: plugins.security.allow_default_init_securityindex
+              value: "true"
+            - name: plugins.security.restapi.roles_enabled
+              value: '["all_access","security_rest_api_access"]'
+            - name: plugins.security.system_indices.enabled
+              value: "true"
+            - name: plugins.security.system_indices.indices
+              value: '[".opendistro-alerting-config",".opendistro-alerting-alert*",".opendistro-anomaly-results*",".opendistro-anomaly-detector*",".opendistro-anomaly-checkpoints",".opendistro-anomaly-detection-state",".opendistro-reports-*",".opendistro-notifications-*",".opendistro-notebooks",".opensearch-observability",".opendistro-asynchronous-search-response*",".replication-metadata-store"]'
+            - name: plugins.security.check_snapshot_restore_write_privileges
+              value: "true"
+            - name: plugins.security.enable_snapshot_restore_privilege
+              value: "true"
+            
+            # Cluster
+            - name: cluster.routing.allocation.disk.threshold_enabled
+              value: "false"
+            
+            # Admin credentials (for probes)
+            - name: INDEXER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-indexer-creds
+                  key: username
+            - name: INDEXER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-indexer-creds
+                  key: password
+          
+          ports:
+            - containerPort: 9200
+              name: http
+            - containerPort: 9300
+              name: transport
+          
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/wazuh-indexer/config/opensearch.yml
+              subPath: opensearch.yml
+              readOnly: true
+            - name: config
+              mountPath: /usr/share/wazuh-indexer/plugins/opensearch-security/securityconfig/internal_users.yml
+              subPath: internal_users.yml
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/wazuh-indexer
+            - name: certs-root
+              mountPath: /usr/share/wazuh-indexer/config/certs/root-ca.pem
+              subPath: ca.crt
+              readOnly: true
+            - name: certs-indexer
+              mountPath: /usr/share/wazuh-indexer/config/certs/wazuh.indexer.pem
+              subPath: tls.crt
+              readOnly: true
+            - name: certs-indexer
+              mountPath: /usr/share/wazuh-indexer/config/certs/wazuh.indexer.key
+              subPath: tls.key
+              readOnly: true
+            - name: certs-admin
+              mountPath: /usr/share/wazuh-indexer/config/certs/admin.pem
+              subPath: tls.crt
+              readOnly: true
+            - name: certs-admin
+              mountPath: /usr/share/wazuh-indexer/config/certs/admin-key.pem
+              subPath: tls.key
+              readOnly: true
+          
+          livenessProbe:
+            tcpSocket:
+              port: 9200
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  #!/bin/sh
+                  # Check cluster health with authentication
+                  RESPONSE=$(curl -sk -u "${INDEXER_USERNAME}:${INDEXER_PASSWORD}" \
+                    "https://localhost:9200/_cluster/health?local=true" 2>/dev/null)
+                  
+                  # Check if response contains green or yellow status
+                  echo "$RESPONSE" | grep -q '"status":"green"' || \
+                  echo "$RESPONSE" | grep -q '"status":"yellow"'
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      
+      volumes:
+        - name: config
+          configMap:
+            name: wazuh-indexer-config
+        - name: certs-root
+          secret:
+            secretName: wazuh-rootca-certificate
+        - name: certs-indexer
+          secret:
+            secretName: wazuh-indexer
+        - name: certs-admin
+          secret:
+            secretName: wazuh-admin
+  
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.indexer.storage.storageClass }}
+        storageClassName: {{ .Values.indexer.storage.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.indexer.storage.size }}

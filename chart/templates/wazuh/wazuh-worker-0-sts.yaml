@@ -51,8 +51,6 @@ spec:
         - name: wazuh-auth
           secret:
             secretName: wazuh-auth
-      nodeSelector:
-        beta.kubernetes.io/arch: amd64
       initContainers:
         - name: volume-mount-hack
           image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
