@@ -46,8 +46,6 @@ spec:
               value: "wazuh-cluster"
             - name: node.max_local_storage_nodes
               value: "1"
-            - name: discovery.type
-              value: "single-node"
             
             # Network
             - name: network.host
