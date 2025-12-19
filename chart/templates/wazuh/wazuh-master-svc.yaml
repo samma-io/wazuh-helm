@@ -51,7 +51,7 @@ spec:
       targetPort: 1515
     - name: cluster
       port: 1516
-      taretPort: 1516
+      targetPort: 1516
     - name: api
       port: 55000
       targetPort: 55000

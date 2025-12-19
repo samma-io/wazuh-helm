@@ -1,14 +1,24 @@
 cluster: int
 
 wazuh:
-  tag: 4.14.0
+  tag: 4.14.1
 
 secrets:
   authdPassword: "AuthPassword!"
   apiUsername: "wazuh-api"
   apiPassword: "ApiPass123!"
   indexerUsername: "admin"
-  indexerPassword: "IndexerPass123!"
-  dashboardUsername: "admin"
-  dashboardPassword: "DashboardPass123!"
+  indexerPassword: "admin"
+  indexerPasswordHash: "$2y$12$/XEgoRRpzHdQfIyeBX5PbeqTctfbehY8PBT2Z.Rv4DNXFUIVnngb."
+  dashboardUsername: "kibanaserver"
+  dashboardPassword: "kibanaserver"
+  dashboardPasswordHash: "$2y$12$toY0XVuqruaJmen//C45p.EPlCOdd7dCpW5gTSiQ7leZvem3GANF2"
   clusterKey: "c98b6ha9b6169zc5f67rae55ae4z5647"
+
+indexer:
+  replicas: 1
+  image:
+    pullPolicy: ""
+  storage:
+    storageClass: "default"
+    size: 20Gi

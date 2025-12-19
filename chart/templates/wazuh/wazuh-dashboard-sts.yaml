@@ -111,8 +111,6 @@ spec:
           ports:
             - containerPort: 5601
               name: kibana
-      nodeSelector:
-        beta.kubernetes.io/arch: amd64
       volumes:
         - name: wazuh-dasboard-config
           configMap:
