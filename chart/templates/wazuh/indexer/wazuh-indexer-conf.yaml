@@ -11,21 +11,21 @@ data:
 
 
     cluster.initial_cluster_manager_nodes: 
-      - "wazuh-indexer-0"
+      - "{{ .Release.Name }}-indexer-0"
       {{- if gt (.Values.indexer.replicas | int) 1 }}
-      - "wazuh-indexer-1"
+      - "{{ .Release.Name }}-indexer-1"
       {{- end }}
       {{- if gt (.Values.indexer.replicas | int) 2 }}
-      - "wazuh-indexer-2"
+      - "{{ .Release.Name }}-indexer-2"
       {{- end }}
     
     discovery.seed_hosts:
-      - "wazuh-indexer-0.wazuh-cluster.{{ .Release.Namespace }}.svc.cluster.local"
+      - "{{ .Release.Name }}-indexer-0.wazuh-cluster.{{ .Release.Namespace }}.svc.cluster.local"
       {{- if gt (.Values.indexer.replicas | int) 1 }}
-      - "wazuh-indexer-1.wazuh-cluster.{{ .Release.Namespace }}.svc.cluster.local"
+      - "{{ .Release.Name }}-indexer-1.wazuh-cluster.{{ .Release.Namespace }}.svc.cluster.local"
       {{- end }}
       {{- if gt (.Values.indexer.replicas | int) 2 }}
-      - "wazuh-indexer-2.wazuh-cluster.{{ .Release.Namespace }}.svc.cluster.local"
+      - "{{ .Release.Name }}-indexer-2.wazuh-cluster.{{ .Release.Namespace }}.svc.cluster.local"
       {{- end }}
     
     path.data: /var/lib/wazuh-indexer
