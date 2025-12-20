@@ -8,17 +8,17 @@ secrets:
   apiUsername: "wazuh-api"
   apiPassword: "ApiPass123!"
   indexerUsername: "admin"
-  indexerPassword: "IndexerPass123!"
-  indexerPasswordHash: "$2y$12$nd7ZKnw//XiA4TKS5xrno..RvrbVcFs0HqoJa0cRUCS2sx4plelHS"
-  dashboardUsername: "dashboard-user"
-  dashboardPassword: "DashboardPass123!"
-  dashboardPasswordHash: "$2y$12$GUMWuF7.qn3eMuk3ROh6fOBVpKPdlAHfvrQ6SsGYlIl20j2yHmDXS"
+  indexerPassword: "admin"
+  indexerPasswordHash: "$2y$12$U5xafRhADTm5OyTv.g8IfObJQ3ahBBamJOtGlEkGJyMS8KYaBveLi"
+  dashboardUsername: "kibanaserver"
+  dashboardPassword: "kibanaserver"
+  dashboardPasswordHash: "$2y$12$rgjKVlSjNHeMej3ab3GMmOyFXWEVej3jHrw4/8mJEgO8pN5v1Qr4."
   clusterKey: "c98b6ha9b6169zc5f67rae55ae4z5647"
 
 indexer:
   replicas: 1
   image:
-    pullPolicy: ""
+    pullPolicy: "IfNotPresent"
   storage:
-    storageClass: "default"
+    storageClass: "longhorn-balanced"
     size: 20Gi

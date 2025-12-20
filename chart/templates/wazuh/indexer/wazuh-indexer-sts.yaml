@@ -137,15 +137,15 @@ spec:
               subPath: opensearch.yml
               readOnly: true
             - name: config
-              mountPath: /usr/share/wazuh-indexer/plugins/opensearch-security/securityconfig/internal_users.yml
+              mountPath: /usr/share/wazuh-indexer/config/opensearch-security/internal_users.yml
               subPath: internal_users.yml
               readOnly: true
             - name: config
-              mountPath: /usr/share/wazuh-indexer/plugins/opensearch-security/securityconfig/roles.yml
+              mountPath: /usr/share/wazuh-indexer/config/opensearch-security/roles.yml
               subPath: roles.yml
               readOnly: true
             - name: config
-              mountPath: /usr/share/wazuh-indexer/plugins/opensearch-security/securityconfig/roles_mapping.yml
+              mountPath: /usr/share/wazuh-indexer/config/opensearch-security/roles_mapping.yml
               subPath: roles_mapping.yml
               readOnly: true
             - name: data
@@ -201,7 +201,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: wazuh-indexer-config
+            name: {{ .Release.Name }}-indexer-conf
         - name: certs-root
           secret:
             secretName: wazuh-rootca-certificate
