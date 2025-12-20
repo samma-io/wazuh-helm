@@ -1,8 +1,8 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: wazuh-manager-master
-  namespace: wazuh
+  name: {{ .Release.Name }}-manager-master
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
@@ -17,16 +17,17 @@ spec:
         app: wazuh-manager
         node-type: master
       name: wazuh-manager-master
-    spec:
+    spec:      
       initContainers:
-        - name: volume-mount-hack
+        - name: init-volumes
           image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
-          command: ["/bin/sh", "-c"]
-          args:
-            - chown -R wazuh:wazuh /var/ossec/;
-              mkdir -p /var/ossec/etc/shared/;
-              echo "#clean" > /var/ossec/etc/shared/ar.conf;
-
+          command:
+            - /bin/sh
+            - -c
+            - |
+              chown -R wazuh:wazuh /var/ossec/ || true
+              mkdir -p /var/ossec/etc/shared/
+              [ ! -f /var/ossec/etc/shared/ar.conf ] && echo "#clean" > /var/ossec/etc/shared/ar.conf || true
           volumeMounts:
             - name: wazuh-manager-master
               mountPath: /var/ossec/
@@ -34,17 +35,27 @@ spec:
         - name: wazuh-manager
           image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
           env:
+            - name: WAZUH_CLUSTER_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: WAZUH_CLUSTER_NODE_TYPE
+              value: "master"
+            - name: WAZUH_CLUSTER_KEY
+              value: "{{ .Values.secrets.clusterKey}}"
+            - name: WAZUH_CLUSTER_NODES
+              value: "wazuh-manager-master-0.wazuh-cluster.wazuh.svc.cluster.local"
             - name: INDEXER_URL
               value: https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200
             - name: INDEXER_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: wazuh-indexer-secret
+                  name: wazuh-indexer-creds
                   key: username
             - name: INDEXER_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: wazuh-indexer-secret
+                  name: wazuh-indexer-creds
                   key: password
             - name: FILEBEAT_SSL_VERIFICATION_MODE
               value: full
@@ -75,10 +86,6 @@ spec:
             - name: config
               mountPath: /wazuh-config-mount/etc/ossec.conf
               subPath: ossec.conf
-              readOnly: true
-            - name: wazuh-register-key
-              mountPath: /var/ossec/etc/authd.pass
-              subPath: authd.pass
               readOnly: true
             - name: wazuh-manager-master
               subPath: api/configuration
@@ -146,9 +153,6 @@ spec:
         - name: config
           configMap:
             name: wazuh-manager-master-conf
-        - name: wazuh-register-key
-          configMap:
-            name: wazuh-register-key
         - name: wazuh-manager
           secret:
             secretName: wazuh-manager
