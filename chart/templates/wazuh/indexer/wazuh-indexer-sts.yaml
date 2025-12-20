@@ -140,6 +140,14 @@ spec:
               mountPath: /usr/share/wazuh-indexer/plugins/opensearch-security/securityconfig/internal_users.yml
               subPath: internal_users.yml
               readOnly: true
+            - name: config
+              mountPath: /usr/share/wazuh-indexer/plugins/opensearch-security/securityconfig/roles.yml
+              subPath: roles.yml
+              readOnly: true
+            - name: config
+              mountPath: /usr/share/wazuh-indexer/plugins/opensearch-security/securityconfig/roles_mapping.yml
+              subPath: roles_mapping.yml
+              readOnly: true
             - name: data
               mountPath: /var/lib/wazuh-indexer
             - name: certs-root
