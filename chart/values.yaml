@@ -15,10 +15,53 @@ secrets:
   dashboardPasswordHash: "$2y$12$rgjKVlSjNHeMej3ab3GMmOyFXWEVej3jHrw4/8mJEgO8pN5v1Qr4."
   clusterKey: "c98b6ha9b6169zc5f67rae55ae4z5647"
 
+dashboard:
+  replicas: 2
+  
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  
+  startupProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+  
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 90
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  storage:
+    storageClass: ""
+    size: 5Gi
+
 indexer:
   replicas: 1
   image:
     pullPolicy: "IfNotPresent"
   storage:
-    storageClass: "longhorn-balanced"
+    storageClass: ""
     size: 20Gi
+    accessMode: ReadWriteOnce

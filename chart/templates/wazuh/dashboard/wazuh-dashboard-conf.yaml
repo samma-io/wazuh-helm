@@ -1,13 +1,16 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: wazuh-dashboard-conf
+  name: {{ .Release.Name }}-dashboard-conf
   namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-dashboard
+    component: dashboard
 data:
   opensearch_dashboards.yml: |-
     server.host: 0.0.0.0
     server.port: 5601
-    opensearch.hosts: https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200
+    opensearch.hosts: https://{{ .Release.Name }}-indexer.{{ .Release.Namespace }}.svc.cluster.local:9200
     opensearch.ssl.verificationMode: certificate
     opensearch.requestHeadersWhitelist: ["securitytenant","Authorization"]
     opensearch_security.multitenancy.enabled: false
@@ -22,7 +25,7 @@ data:
   wazuh.yml: |-
     hosts:
     - 1513629884013:
-        url: "https://wazuh-manager.{{ .Release.Namespace }}.svc"
+        url: "https://{{ .Release.Name }}-manager.{{ .Release.Namespace }}.svc.cluster.local"
         port: 55000
         username: {{ .Values.secrets.apiUsername }}
         password: {{ .Values.secrets.apiPassword | quote }}
