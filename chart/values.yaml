@@ -16,7 +16,7 @@ secrets:
   clusterKey: "c98b6ha9b6169zc5f67rae55ae4z5647"
 
 dashboard:
-  replicas: 2
+  replicas: 1
   
   resources:
     requests:
@@ -53,15 +53,16 @@ dashboard:
       maxSurge: 1
       maxUnavailable: 0
   
-  storage:
-    storageClass: ""
+  persistence:
+    storageClass: "longhorn-balanced"
     size: 5Gi
+    accessMode: ReadWriteOnce
 
 indexer:
   replicas: 1
   image:
     pullPolicy: "IfNotPresent"
   storage:
-    storageClass: ""
+    storageClass: "longhorn-balanced"
     size: 20Gi
     accessMode: ReadWriteOnce
