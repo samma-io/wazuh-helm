@@ -11,7 +11,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: wazuh-manager-worker-0-conf
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
 data:
   # /var/ossec/etc-template/ossec.conf
   ossec.conf: |-

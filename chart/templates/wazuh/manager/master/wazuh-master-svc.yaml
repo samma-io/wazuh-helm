@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: wazuh
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: wazuh-manager
   annotations:
@@ -23,7 +23,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: wazuh-manager
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: wazuh-manager
   annotations:
