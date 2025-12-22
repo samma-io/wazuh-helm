@@ -1,0 +1,188 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-dashboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-dashboard
+    component: dashboard
+spec:
+  replicas: {{ .Values.dashboard.replicas }}
+  {{- with .Values.dashboard.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-dashboard
+      node-type: dashboard
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-dashboard
+        node-type: dashboard
+      name: {{ .Release.Name }}-dashboard
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: "OnRootMismatch"
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: wazuh-dashboard
+          image: wazuh/wazuh-dashboard:{{ .Values.wazuh.tag }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: WAZUH_API_URL
+              value: "https://{{ .Release.Name }}-manager.{{ .Release.Namespace }}.svc.cluster.local"
+            - name: DASHBOARD_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-dashboard-secret
+                  key: username
+            - name: DASHBOARD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-dashboard-secret
+                  key: password
+            - name: API_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-dashboard-secret
+                  key: api-username
+            - name: API_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-dashboard-secret
+                  key: api-password
+            - name: SERVER_HOST
+              value: "0.0.0.0"
+            - name: SERVER_PORT
+              value: "5601"
+            - name: OPENSEARCH_HOSTS
+              value: "https://{{ .Release.Name }}-indexer.{{ .Release.Namespace }}.svc.cluster.local:9200"
+            - name: OPENSEARCH_SSL_VERIFICATIONMODE
+              value: certificate
+            - name: OPENSEARCH_REQUESTHEADERSALLOWLIST
+              value: '["securitytenant","Authorization"]'
+            - name: OPENSEARCH_SECURITY_MULTITENANCY_ENABLED
+              value: "false"
+            - name: SERVER_SSL_ENABLED
+              value: "true"
+            - name: OPENSEARCH_SECURITY_READONLY_MODE_ROLES
+              value: '["kibana_read_only"]'
+            - name: SERVER_SSL_KEY
+              value: "/usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem"
+            - name: SERVER_SSL_CERTIFICATE
+              value: "/usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem"
+            - name: OPENSEARCH_SSL_CERTIFICATEAUTHORITIES
+              value: '["/usr/share/wazuh-dashboard/certs/root-ca.pem"]'
+            - name: UISETTINGS_OVERRIDES_DEFAULTROUTE
+              value: "/app/wz-home"
+          volumeMounts:
+            - name: wazuh-dashboard-config
+              mountPath: /usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+              subPath: opensearch_dashboards.yml
+              readOnly: true
+            - name: wazuh-dashboard-config
+              mountPath: /wazuh-config-mount/data/wazuh/config/wazuh.yml
+              subPath: wazuh.yml
+              readOnly: true
+            - name: wazuh-dashboard-data
+              mountPath: /usr/share/wazuh-dashboard/data/wazuh/config
+              subPath: config
+            - name: wazuh-dashboard-data
+              mountPath: /usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom
+              subPath: assets
+            - name: wazuh-root
+              mountPath: /usr/share/wazuh-dashboard/certs/root-ca.pem
+              subPath: ca.crt
+              readOnly: true
+            - name: wazuh-dashboard
+              subPath: tls.key
+              mountPath: /usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem
+              readOnly: true
+            - name: wazuh-dashboard
+              mountPath: /usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem
+              subPath: tls.crt
+              readOnly: true
+          ports:
+            - containerPort: 5601
+              name: http
+              protocol: TCP
+          {{- if .Values.dashboard.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+              path: /api/status
+              port: 5601
+              scheme: HTTPS
+            initialDelaySeconds: {{ .Values.dashboard.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.dashboard.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.dashboard.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.dashboard.startupProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.dashboard.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /api/status
+              port: 5601
+              scheme: HTTPS
+            initialDelaySeconds: {{ .Values.dashboard.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.dashboard.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.dashboard.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.dashboard.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.dashboard.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: 5601
+              scheme: HTTPS
+            initialDelaySeconds: {{ .Values.dashboard.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.dashboard.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.dashboard.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.dashboard.readinessProbe.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.dashboard.resources | nindent 12 }}
+      volumes:
+        - name: wazuh-dashboard-config
+          configMap:
+            name: {{ .Release.Name }}-dashboard-conf
+        - name: wazuh-dashboard
+          secret:
+            secretName: {{ .Release.Name }}-dashboard
+            defaultMode: 0440
+        - name: wazuh-root
+          secret:
+            secretName: {{ .Release.Name }}-rootca-certificate
+            defaultMode: 0444
+        - name: wazuh-dashboard-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-dashboard-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-dashboard-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-dashboard
+    component: dashboard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.dashboard.storage.storageClass }}
+  storageClassName: {{ .Values.dashboard.storage.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.dashboard.storage.size }}

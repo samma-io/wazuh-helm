@@ -1,18 +1,18 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: wazuh-dashboard  # Don't change, unless you update the Wazuh Kibana app config
-  namespace: wazuh
+  name: {{ .Release.Name }}-dashboard
+  namespace: {{ .Release.Namespace }}
   labels:
-      app: wazuh-dashboard
-      node-type: dashboard
-  annotations:
+    app: {{ .Release.Name }}-dashboard
+    component: dashboard
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
-      app: wazuh-dashboard
-      node-type: dashboard
+    app: {{ .Release.Name }}-dashboard
+    node-type: dashboard
   ports:
-    - name: kibana
+    - name: http
       port: 5601
-      targetPort: 5601
+      targetPort: http
+      protocol: TCP

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: wazuh-manager-worker-0
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
@@ -157,7 +157,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: wazuh-worker-0
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: wazuh-worker-0
 spec:
@@ -172,7 +172,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: wazuh-worker-filebeat
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: wazuh-worker-0
 spec:

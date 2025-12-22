@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: wazuh-indexer  # Don't change, unless you update the Wazuh Kibana app config
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
   labels:
       app: wazuh-indexer
       node-type: index

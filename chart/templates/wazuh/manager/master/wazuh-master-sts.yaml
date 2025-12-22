@@ -167,7 +167,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: wazuh-manager-master
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: wazuh-manager-master
 spec:
@@ -181,7 +181,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: wazuh-manager-filebeat
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: wazuh-manager-master
 spec:

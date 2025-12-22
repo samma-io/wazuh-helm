@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: wazuh-manager-master-conf
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
 data:
   ar.conf: |-
     #dead
