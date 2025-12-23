@@ -1,8 +1,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: wazuh-manager-master-conf
+  name: {{ .Release.Name }}-manager-master-conf
   namespace: {{ .Release.Namespace }}
+  {{- with .Values.global.labels }}
+  labels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 data:
   ar.conf: |-
     #dead
@@ -113,7 +117,7 @@ data:
       <indexer>
         <enabled>yes</enabled>
         <hosts>
-          <host>https://wazuh-indexer.wazuh.svc:9200</host>
+          <host>https://{{ .Release.Name }}-indexer.{{ .Release.Namespace }}.svc:9200</host>
         </hosts>
         <ssl>
           <certificate_authorities>
@@ -296,11 +300,11 @@ data:
         <name>wazuh</name>
         <node_name>NODE_NAME</node_name>  <!-- Wazuh entrypoint replaces this -->
         <node_type>master</node_type>
-        <key>c98b6ha9b6169zc5f67rae55ae4z5647</key>
+        <key>{{ .Values.secrets.clusterKey }}</key>
         <port>1516</port>
         <bind_addr>0.0.0.0</bind_addr>
         <nodes>
-            <node>wazuh-manager-master-0.wazuh-cluster.wazuh.svc.cluster.local</node>
+            <node>{{ .Release.Name }}-manager-master-0.wazuh-cluster.{{ .Release.Namespace }}.svc.cluster.local</node>
         </nodes>
         <hidden>no</hidden>
         <disabled>no</disabled>

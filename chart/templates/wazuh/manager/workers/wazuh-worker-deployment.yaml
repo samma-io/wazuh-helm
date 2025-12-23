@@ -6,6 +6,9 @@ metadata:
   labels:
     app: {{ .Release.Name }}-manager
     component: worker
+    {{- with .Values.global.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   replicas: {{ .Values.manager.workers.replicas }}
   {{- with .Values.manager.workers.strategy }}
@@ -21,27 +24,15 @@ spec:
       labels:
         app: {{ .Release.Name }}-manager
         node-type: worker
-      {{- with .Values.manager.workers.podAnnotations }}
-      annotations:
+        {{- with .Values.global.labels }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
       name: {{ .Release.Name }}-workers
     spec:
-      {{- with .Values.manager.workers.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.manager.workers.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.manager.workers.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       initContainers:
         - name: init-volumes
-          image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
+          image: {{ .Values.manager.workers.image.repository }}:{{ .Values.wazuh.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           command:
             - /bin/sh
             - -c
@@ -128,8 +119,8 @@ spec:
               mountPath: /filebeat-data
       containers:
         - name: wazuh-manager
-          image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
-          imagePullPolicy: IfNotPresent
+          image: {{ .Values.manager.workers.image.repository }}:{{ .Values.wazuh.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           env:
             - name: WAZUH_CLUSTER_NODE_TYPE
               value: "worker"
@@ -215,16 +206,16 @@ spec:
               subPath: authd.pass
               readOnly: true
           ports:
-            - containerPort: 1514
+            - containerPort: {{ .Values.manager.workers.service.ports.agent }}
               name: agents-events
               protocol: TCP
-            - containerPort: 1516
+            - containerPort: {{ .Values.manager.workers.service.ports.cluster }}
               name: cluster
               protocol: TCP
           {{- if .Values.manager.workers.startupProbe.enabled }}
           startupProbe:
             tcpSocket:
-              port: 1514
+              port: {{ .Values.manager.workers.service.ports.agent }}
             initialDelaySeconds: {{ .Values.manager.workers.startupProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.manager.workers.startupProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.manager.workers.startupProbe.timeoutSeconds }}
@@ -233,7 +224,7 @@ spec:
           {{- if .Values.manager.workers.livenessProbe.enabled }}
           livenessProbe:
             tcpSocket:
-              port: 1514
+              port: {{ .Values.manager.workers.service.ports.agent }}
             initialDelaySeconds: {{ .Values.manager.workers.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.manager.workers.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.manager.workers.livenessProbe.timeoutSeconds }}
@@ -242,7 +233,7 @@ spec:
           {{- if .Values.manager.workers.readinessProbe.enabled }}
           readinessProbe:
             tcpSocket:
-              port: 1514
+              port: {{ .Values.manager.workers.service.ports.agent }}
             initialDelaySeconds: {{ .Values.manager.workers.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.manager.workers.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.manager.workers.readinessProbe.timeoutSeconds }}
@@ -273,6 +264,7 @@ spec:
             secretName: {{ .Release.Name }}-auth
             defaultMode: 0440
 ---
+{{- if .Values.manager.workers.persistence.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -281,15 +273,24 @@ metadata:
   labels:
     app: {{ .Release.Name }}-manager
     component: worker
-  {{- with .Values.manager.workers.pvcAnnotations }}
-  annotations:
+    {{- with .Values.global.labels }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   accessModes:
     - {{ .Values.manager.workers.persistence.accessMode }}
   {{- if .Values.manager.workers.persistence.storageClass }}
-  storageClassName: {{ .Values.manager.workers.persistence.storageClass | quote }}
+  {{- if eq .Values.manager.workers.persistence.storageClass "-" }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.global.storageClass | quote }}
+  {{- end }}
+  {{- else if .Values.global.storageClass }}
+  {{- if eq .Values.global.storageClass "-" }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.global.storageClass | quote }}
+  {{- end }}
   {{- end }}
   resources:
     requests:
@@ -303,16 +304,26 @@ metadata:
   labels:
     app: {{ .Release.Name }}-manager
     component: worker-filebeat
-  {{- with .Values.manager.workers.pvcAnnotations }}
-  annotations:
+    {{- with .Values.global.labels }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   accessModes:
     - {{ .Values.manager.workers.persistence.accessMode }}
   {{- if .Values.manager.workers.persistence.storageClass }}
-  storageClassName: {{ .Values.manager.workers.persistence.storageClass | quote }}
+  {{- if eq .Values.manager.workers.persistence.storageClass "-" }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.global.storageClass | quote }}
+  {{- end }}
+  {{- else if .Values.global.storageClass }}
+  {{- if eq .Values.global.storageClass "-" }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.global.storageClass | quote }}
+  {{- end }}
   {{- end }}
   resources:
     requests:
       storage: {{ .Values.manager.workers.persistence.filebeatSize }}
+{{- end }}

@@ -1,20 +1,25 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: wazuh-indexer  # Don't change, unless you update the Wazuh Kibana app config
+  name: {{ .Release.Name }}-indexer
   namespace: {{ .Release.Namespace }}
   labels:
-      app: wazuh-indexer
-      node-type: index
+    app: {{ .Release.Name }}-indexer
+    node-type: index
+    {{- with .Values.global.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.indexer.service.annotations }}
   annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
-  type: ClusterIP
+  type: {{ .Values.indexer.service.type }}
   selector:
-      app: wazuh-indexer
-      node-type: index
+    app: {{ .Release.Name }}-indexer
+    node-type: index
   ports:
     - name: opensearch
-      port: 9200
-      targetPort: 9200
-
-    
+      port: {{ .Values.indexer.service.port }}
+      targetPort: http
+      protocol: TCP

@@ -34,7 +34,7 @@ spec:
       containers:
         - name: wazuh-dashboard
           image: wazuh/wazuh-dashboard:{{ .Values.wazuh.tag }}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -159,10 +159,16 @@ spec:
           secret:
             secretName: {{ .Release.Name }}-rootca-certificate
             defaultMode: 0444
+        {{- if .Values.dashboard.persistence.enabled }}
         - name: wazuh-dashboard-data
           persistentVolumeClaim:
             claimName: {{ .Release.Name }}-dashboard-data
+        {{- else }}
+        - name: wazuh-dashboard-data
+          emptyDir: {}
+        {{- end }}
 ---
+{{- if .Values.dashboard.persistence.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -178,9 +184,10 @@ spec:
   {{- if eq .Values.dashboard.persistence.storageClass "-" }}
   storageClassName: ""
   {{- else }}
-  storageClassName: {{ .Values.dashboard.persistence.storageClass | quote }}
+  storageClassName: {{ .Values.global.storageClass | quote }}
   {{- end }}
   {{- end }}
   resources:
     requests:
       storage: {{ .Values.dashboard.persistence.size }}
+{{- end }}

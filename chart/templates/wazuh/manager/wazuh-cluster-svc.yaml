@@ -3,11 +3,22 @@ kind: Service
 metadata:
   name: {{ .Release.Name }}-cluster
   namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-manager
+    component: cluster
+    {{- with .Values.global.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.global.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   clusterIP: None
   selector:
     app: {{ .Release.Name }}-manager
   ports:
     - name: cluster
-      port: 1516
-      targetPort: 1516
+      port: {{ .Values.manager.master.service.ports.cluster }}
+      targetPort: cluster
+      protocol: TCP

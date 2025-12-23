@@ -6,7 +6,7 @@ wazuh:
 global:
   imagePullPolicy: IfNotPresent
 
-  storageClass: ""
+  storageClass: "longhorn-balanced"
 
   nodeSelector: {}
   tolerations: []
@@ -93,7 +93,11 @@ indexer:
       memory: 4Gi
 
   startupProbe:
-    enabled: false
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
 
   livenessProbe:
     enabled: true

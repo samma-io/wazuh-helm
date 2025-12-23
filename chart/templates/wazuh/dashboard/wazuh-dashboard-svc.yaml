@@ -3,16 +3,20 @@ kind: Service
 metadata:
   name: {{ .Release.Name }}-dashboard
   namespace: {{ .Release.Namespace }}
+  {{- with .Values.dashboard.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   labels:
     app: {{ .Release.Name }}-dashboard
     component: dashboard
 spec:
-  type: ClusterIP
+  type: {{ .Values.dashboard.service.type }}
   selector:
     app: {{ .Release.Name }}-dashboard
     node-type: dashboard
   ports:
     - name: http
-      port: 5601
+      port: {{ .Values.dashboard.service.port }}
       targetPort: http
       protocol: TCP

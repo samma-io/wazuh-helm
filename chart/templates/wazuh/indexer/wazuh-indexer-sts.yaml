@@ -3,21 +3,48 @@ kind: StatefulSet
 metadata:
   name: {{ .Release.Name }}-indexer
   namespace: {{ .Release.Namespace }}
+  {{- with .Values.global.labels }}
+  labels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.indexer.replicas }}
   selector:
     matchLabels:
       app: {{ .Release.Name }}-indexer
       node-type: index
   serviceName: wazuh-cluster
   podManagementPolicy: Parallel
+  {{- with .Values.indexer.strategy }}
+  updateStrategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   template:
     metadata:
       labels:
         app: {{ .Release.Name }}-indexer
         node-type: index
+        {{- with .Values.global.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.global.annotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       name: {{ .Release.Name }}-indexer
     spec:
+      {{- with .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
@@ -25,19 +52,18 @@ spec:
         fsGroupChangePolicy: "OnRootMismatch"
       containers:
         - name: wazuh-indexer
-          image: wazuh/wazuh-indexer:{{ .Values.wazuh.tag }}
+          image: {{ .Values.indexer.image.repository }}:{{ .Values.wazuh.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           env:
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            # JVM Settings
             - name: OPENSEARCH_JAVA_OPTS
-              value: "-Xms1g -Xmx1g"
+              value: {{ .Values.indexer.javaOpts | quote }}
             - name: bootstrap.memory_lock
               value: "true"
             
-            # Node Settings
             - name: node.name
               valueFrom:
                 fieldRef:
@@ -47,19 +73,15 @@ spec:
             - name: node.max_local_storage_nodes
               value: "1"
             
-            # Network
             - name: network.host
               value: "0.0.0.0"
             - name: http.port
               value: "9200"
-            - name: transport.port  # Fixed: updated from transport.tcp.port
+            - name: transport.port
               value: "9300"
             
-            # Compatibility
             - name: compatibility.override_main_response_version
               value: "true"
-            
-            # SSL/TLS HTTP
             - name: plugins.security.ssl.http.enabled
               value: "true"
             - name: plugins.security.ssl.http.pemcert_filepath
@@ -69,7 +91,6 @@ spec:
             - name: plugins.security.ssl.http.pemtrustedcas_filepath
               value: "/usr/share/wazuh-indexer/config/certs/root-ca.pem"
             
-            # SSL/TLS Transport
             - name: plugins.security.ssl.transport.pemcert_filepath
               value: "/usr/share/wazuh-indexer/config/certs/wazuh.indexer.pem"
             - name: plugins.security.ssl.transport.pemkey_filepath
@@ -81,13 +102,11 @@ spec:
             - name: plugins.security.ssl.transport.resolve_hostname
               value: "false"
             
-            # Security - DNs
             - name: plugins.security.nodes_dn
               value: "CN=wazuh.indexer,OU=Wazuh,O=Wazuh,L=California,C=US"
             - name: plugins.security.authcz.admin_dn
               value: "CN=admin,OU=Wazuh,O=Wazuh,L=California,C=US"
             
-            # Security - General
             - name: plugins.security.allow_default_init_securityindex
               value: "true"
             - name: plugins.security.restapi.roles_enabled
@@ -101,20 +120,18 @@ spec:
             - name: plugins.security.enable_snapshot_restore_privilege
               value: "true"
             
-            # Cluster
             - name: cluster.routing.allocation.disk.threshold_enabled
               value: "false"
             
-            # Admin credentials (for probes)
             - name: INDEXER_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: wazuh-indexer-creds
+                  name: {{ .Release.Name }}-indexer-creds
                   key: username
             - name: INDEXER_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: wazuh-indexer-creds
+                  name: {{ .Release.Name }}-indexer-creds
                   key: password
           
           ports:
@@ -124,12 +141,7 @@ spec:
               name: transport
           
           resources:
-            requests:
-              cpu: 500m
-              memory: 2Gi
-            limits:
-              cpu: 1000m
-              memory: 2Gi
+            {{- toYaml .Values.indexer.resources | nindent 12 }}
           
           volumeMounts:
             - name: config
@@ -171,14 +183,27 @@ spec:
               subPath: tls.key
               readOnly: true
           
+          {{- if .Values.indexer.startupProbe.enabled }}
+          startupProbe:
+            tcpSocket:
+              port: 9200
+            initialDelaySeconds: {{ .Values.indexer.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.indexer.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.indexer.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.indexer.startupProbe.failureThreshold }}
+          {{- end }}
+          
+          {{- if .Values.indexer.livenessProbe.enabled }}
           livenessProbe:
             tcpSocket:
               port: 9200
-            initialDelaySeconds: 90
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 3
+            initialDelaySeconds: {{ .Values.indexer.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.indexer.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.indexer.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.indexer.livenessProbe.failureThreshold }}
+          {{- end }}
           
+          {{- if .Values.indexer.readinessProbe.enabled }}
           readinessProbe:
             exec:
               command:
@@ -193,10 +218,11 @@ spec:
                   # Check if response contains green or yellow status
                   echo "$RESPONSE" | grep -q '"status":"green"' || \
                   echo "$RESPONSE" | grep -q '"status":"yellow"'
-            initialDelaySeconds: 60
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 3
+            initialDelaySeconds: {{ .Values.indexer.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.indexer.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.indexer.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.indexer.readinessProbe.failureThreshold }}
+          {{- end }}
       
       volumes:
         - name: config
@@ -204,22 +230,33 @@ spec:
             name: {{ .Release.Name }}-indexer-conf
         - name: certs-root
           secret:
-            secretName: wazuh-rootca-certificate
+            secretName: {{ .Release.Name }}-rootca-certificate
         - name: certs-indexer
           secret:
-            secretName: wazuh-indexer
+            secretName: {{ .Release.Name }}-indexer
         - name: certs-admin
           secret:
-            secretName: wazuh-admin
+            secretName: {{ .Release.Name }}-admin
   
   volumeClaimTemplates:
     - metadata:
         name: data
       spec:
-        accessModes: ["ReadWriteOnce"]
-        {{- if .Values.indexer.storage.storageClass }}
-        storageClassName: {{ .Values.indexer.storage.storageClass | quote }}
+        accessModes: 
+          - {{ .Values.indexer.persistence.accessMode }}
+        {{- if .Values.indexer.persistence.storageClass }}
+        {{- if eq .Values.indexer.persistence.storageClass "-" }}
+        storageClassName: ""
+        {{- else }}
+        storageClassName: {{ .Values.global.storageClass | quote }}
+        {{- end }}
+        {{- else if .Values.global.storageClass }}
+        {{- if eq .Values.global.storageClass "-" }}
+        storageClassName: ""
+        {{- else }}
+        storageClassName: {{ .Values.global.storageClass | quote }}
+        {{- end }}
         {{- end }}
         resources:
           requests:
-            storage: {{ .Values.indexer.storage.size }}
+            storage: {{ .Values.indexer.persistence.size }}

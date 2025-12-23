@@ -1,66 +1,66 @@
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: wazuh-issuer
+  name: {{ .Release.Name }}-issuer
 spec:
   selfSigned: {}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: wazuh-rootca-certificate
+  name: {{ .Release.Name }}-rootca-certificate
   namespace: {{ .Release.Namespace }}
 spec:
-  secretName: wazuh-rootca-certificate
-  commonName: "wazuh-rootca"
+  secretName: {{ .Release.Name }}-rootca-certificate
+  commonName: "{{ .Release.Name }}-rootca"
   isCA: true
   issuerRef:
-    name: wazuh-issuer
+    name: {{ .Release.Name }}-issuer
     kind: Issuer
 ---
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: wazuh-rootca-issuer
+  name: {{ .Release.Name }}-rootca-issuer
 spec:
   ca:
-    secretName: wazuh-rootca-certificate
+    secretName: {{ .Release.Name }}-rootca-certificate
 ---
 
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: wazuh-admin
+  name: {{ .Release.Name }}-admin
 spec:
-  secretName: wazuh-admin
-  duration: 2160h # 90d
-  renewBefore: 360h # 15d
-  commonName: wazuh-admin.wazuh.svc
+  secretName: {{ .Release.Name }}-admin
+  duration: 2160h
+  renewBefore: 360h
+  commonName: {{ .Release.Name }}-admin.{{ .Release.Namespace }}.svc
   dnsNames:
-  - wazuh-indexer
-  - wazuh-indexer.wazuh.svc
-  - wazuh-indexer.wazuh.svc.cluster.local
-  - wazuh-admin.wazuh.svc
-  - wazuh-admin.wazuh.svc.cluster.local
+  - {{ .Release.Name }}-indexer
+  - {{ .Release.Name }}-indexer.{{ .Release.Namespace }}.svc
+  - {{ .Release.Name }}-indexer.{{ .Release.Namespace }}.svc.cluster.local
+  - {{ .Release.Name }}-admin.{{ .Release.Namespace }}.svc
+  - {{ .Release.Name }}-admin.{{ .Release.Namespace }}.svc.cluster.local
   issuerRef:
-    name: wazuh-rootca-issuer
+    name: {{ .Release.Name }}-rootca-issuer
     kind: Issuer 
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: wazuh-indexer
+  name: {{ .Release.Name }}-indexer
 spec:
-  secretName: wazuh-indexer
-  duration: 2160h # 90d
-  renewBefore: 360h # 15d
-  commonName: wazuh-indexer.wazuh.svc
+  secretName: {{ .Release.Name }}-indexer
+  duration: 2160h
+  renewBefore: 360h
+  commonName: {{ .Release.Name }}-indexer.{{ .Release.Namespace }}.svc
   dnsNames:
-  - wazuh-indexer
-  - wazuh-indexer.wazuh.svc
-  - wazuh-indexer.wazuh.svc.cluster.local
+  - {{ .Release.Name }}-indexer
+  - {{ .Release.Name }}-indexer.{{ .Release.Namespace }}.svc
+  - {{ .Release.Name }}-indexer.{{ .Release.Namespace }}.svc.cluster.local
   issuerRef:
-    name: wazuh-rootca-issuer
+    name: {{ .Release.Name }}-rootca-issuer
     kind: Issuer 
 ---
 apiVersion: cert-manager.io/v1
@@ -68,15 +68,15 @@ kind: Certificate
 metadata:
   name: wazuh-manager
 spec:
-  secretName: wazuh-manager
-  duration: 2160h # 90d
-  renewBefore: 360h # 15d
-  commonName: wazuh-manager.wazuh.svc
+  secretName: {{ .Release.Name }}-manager
+  duration: 2160h
+  renewBefore: 360h
+  commonName: {{ .Release.Name }}-manager.{{ .Release.Namespace }}.svc
   dnsNames:
-  - wazuh-manager.wazuh.svc
-  - wazuh-manager.wazuh.svc.cluster.local
+  - {{ .Release.Name }}-manager.{{ .Release.Namespace }}.svc
+  - {{ .Release.Name }}-manager.{{ .Release.Namespace }}.svc.cluster.local
   issuerRef:
-    name: wazuh-rootca-issuer
+    name: {{ .Release.Name }}-rootca-issuer
     kind: Issuer 
 ---
 apiVersion: cert-manager.io/v1
@@ -84,29 +84,29 @@ kind: Certificate
 metadata:
   name:  wazuh-worker
 spec:
-  secretName:  wazuh-worker
-  duration: 2160h # 90d
-  renewBefore: 360h # 15d
-  commonName:  wazuh-worker.wazuh.svc
+  secretName: {{ .Release.Name }}-worker
+  duration: 2160h
+  renewBefore: 360h
+  commonName:  {{ .Release.Name }}-worker.{{ .Release.Namespace }}.svc
   dnsNames:
-  - wazuh-worker.wazuh.svc
-  - wazuh-worker.wazuh.svc.cluster.local
+  - {{ .Release.Name }}-worker.{{ .Release.Namespace }}.svc
+  - {{ .Release.Name }}-worker.{{ .Release.Namespace }}.svc.cluster.local
   issuerRef:
-    name: wazuh-rootca-issuer
+    name: {{ .Release.Name }}-rootca-issuer
     kind: Issuer 
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name:  wazuh-dashboard
+  name:  {{ .Release.Name }}-dashboard
 spec:
-  secretName:  wazuh-dashboard
-  duration: 2160h # 90d
-  renewBefore: 360h # 15d
-  commonName:  wazuh-dashboard.wazuh.svc
+  secretName:  {{ .Release.Name }}-dashboard
+  duration: 2160h
+  renewBefore: 360h
+  commonName:  {{ .Release.Name }}-dashboard.{{ .Release.Namespace }}.svc
   dnsNames:
-  - wazuh-dashboard.wazuh.svc
-  - wazuh-dashboard.wazuh.svc.cluster.local
+  - {{ .Release.Name }}-dashboard.{{ .Release.Namespace }}.svc
+  - {{ .Release.Name }}-dashboard.{{ .Release.Namespace }}.svc.cluster.local
   issuerRef:
-    name: wazuh-rootca-issuer
+    name: {{ .Release.Name }}-rootca-issuer
     kind: Issuer 
