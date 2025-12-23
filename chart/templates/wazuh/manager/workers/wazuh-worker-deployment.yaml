@@ -1,0 +1,318 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-workers
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-manager
+    component: worker
+spec:
+  replicas: {{ .Values.manager.workers.replicas }}
+  {{- with .Values.manager.workers.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-manager
+      node-type: worker
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-manager
+        node-type: worker
+      {{- with .Values.manager.workers.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      name: {{ .Release.Name }}-workers
+    spec:
+      {{- with .Values.manager.workers.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.manager.workers.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.manager.workers.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: init-volumes
+          image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "Initializing Wazuh worker volumes..."
+              
+              # Initialize main wazuh data directory structure
+              if [ ! -d /wazuh-data/etc ] || [ -z "$(ls -A /wazuh-data/etc 2>/dev/null)" ]; then
+                echo "Copying initial Wazuh data structure..."
+                cp -a /var/ossec/data_tmp/permanent/var/ossec/. /wazuh-data/ 2>/dev/null || true
+              fi
+              
+              # Ensure required directories exist
+              mkdir -p /wazuh-data/etc/shared
+              mkdir -p /wazuh-data/api/configuration
+              mkdir -p /wazuh-data/logs
+              mkdir -p /wazuh-data/queue
+              mkdir -p /wazuh-data/multigroups
+              mkdir -p /wazuh-data/integrations
+              mkdir -p /wazuh-data/active-response/bin
+              mkdir -p /wazuh-data/agentless
+              mkdir -p /wazuh-data/wodles
+              
+              # Create ar.conf if it doesn't exist
+              [ ! -f /wazuh-data/etc/shared/ar.conf ] && echo "#clean" > /wazuh-data/etc/shared/ar.conf
+              
+              # Initialize filebeat directories
+              mkdir -p /filebeat-data/etc
+              mkdir -p /filebeat-data/var
+              
+              # Copy filebeat.yml if it doesn't exist
+              if [ ! -f /filebeat-data/etc/filebeat.yml ]; then
+                echo "Copying initial filebeat configuration..."
+                cp /etc/filebeat/filebeat.yml /filebeat-data/etc/ 2>/dev/null || \
+                cat > /filebeat-data/etc/filebeat.yml << 'EOF'
+              filebeat.modules:
+                - module: wazuh
+                  alerts:
+                    enabled: true
+                  archives:
+                    enabled: false
+
+              setup.template.json.enabled: true
+              setup.template.json.path: /etc/filebeat/wazuh-template.json
+              setup.template.json.name: wazuh
+              setup.template.overwrite: true
+              setup.ilm.enabled: false
+
+              output.elasticsearch:
+                hosts: ["${INDEXER_URL}"]
+                username: "${INDEXER_USERNAME}"
+                password: "${INDEXER_PASSWORD}"
+                ssl.certificate_authorities:
+                  - ${SSL_CERTIFICATE_AUTHORITIES}
+                ssl.certificate: "${SSL_CERTIFICATE}"
+                ssl.key: "${SSL_KEY}"
+                ssl.verification_mode: "${FILEBEAT_SSL_VERIFICATION_MODE}"
+
+              logging.level: info
+              logging.to_files: true
+              logging.files:
+                path: /var/log/filebeat
+                name: filebeat
+                keepfiles: 7
+                permissions: 0640
+              EOF
+              fi
+              
+              # Copy wazuh-template.json if it doesn't exist
+              if [ ! -f /filebeat-data/etc/wazuh-template.json ]; then
+                cp /etc/filebeat/wazuh-template.json /filebeat-data/etc/ 2>/dev/null || true
+              fi
+              
+              # Set permissions
+              chown -R wazuh:wazuh /wazuh-data/ || true
+              chown -R root:root /filebeat-data/ || true
+              
+              echo "Volume initialization complete."
+          volumeMounts:
+            - name: wazuh-worker-data
+              mountPath: /wazuh-data
+            - name: wazuh-worker-filebeat
+              mountPath: /filebeat-data
+      containers:
+        - name: wazuh-manager
+          image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: WAZUH_CLUSTER_NODE_TYPE
+              value: "worker"
+            - name: WAZUH_CLUSTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-cluster-secret
+                  key: cluster-key
+            - name: WAZUH_CLUSTER_NODES
+              value: "{{ .Release.Name }}-manager.{{ .Release.Namespace }}.svc.cluster.local"
+            - name: INDEXER_URL
+              value: https://{{ .Release.Name }}-indexer.{{ .Release.Namespace }}.svc:9200
+            - name: INDEXER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-indexer-creds
+                  key: username
+            - name: INDEXER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-indexer-creds
+                  key: password
+            - name: FILEBEAT_SSL_VERIFICATION_MODE
+              value: full
+            - name: SSL_CERTIFICATE_AUTHORITIES
+              value: /etc/ssl/root-ca.pem
+            - name: SSL_CERTIFICATE
+              value: /etc/ssl/filebeat.pem
+            - name: SSL_KEY
+              value: /etc/ssl/filebeat.key
+          volumeMounts:
+            - name: config
+              mountPath: /wazuh-config-mount/etc/ossec.conf
+              subPath: ossec.conf
+              readOnly: true
+            - name: wazuh-worker-data
+              subPath: api/configuration
+              mountPath: /var/ossec/api/configuration
+            - name: wazuh-worker-data
+              subPath: etc
+              mountPath: /var/ossec/etc
+            - name: wazuh-worker-data
+              subPath: logs
+              mountPath: /var/ossec/logs
+            - name: wazuh-worker-data
+              subPath: queue
+              mountPath: /var/ossec/queue
+            - name: wazuh-worker-data
+              subPath: multigroups
+              mountPath: /var/ossec/var/multigroups
+            - name: wazuh-worker-data
+              subPath: integrations
+              mountPath: /var/ossec/integrations
+            - name: wazuh-worker-data
+              subPath: active-response/bin
+              mountPath: /var/ossec/active-response/bin
+            - name: wazuh-worker-data
+              subPath: agentless
+              mountPath: /var/ossec/agentless
+            - name: wazuh-worker-data
+              subPath: wodles
+              mountPath: /var/ossec/wodles
+            - name: wazuh-worker-filebeat
+              subPath: etc
+              mountPath: /etc/filebeat
+            - name: wazuh-worker-filebeat
+              subPath: var
+              mountPath: /var/lib/filebeat
+            - name: wazuh-worker
+              mountPath: /etc/ssl/filebeat.key
+              subPath: tls.key
+              readOnly: true
+            - name: wazuh-worker
+              mountPath: /etc/ssl/filebeat.pem
+              subPath: tls.crt
+              readOnly: true
+            - name: wazuh-root
+              mountPath: /etc/ssl/root-ca.pem
+              subPath: ca.crt
+              readOnly: true
+            - name: wazuh-auth
+              mountPath: /var/ossec/etc/authd.pass
+              subPath: authd.pass
+              readOnly: true
+          ports:
+            - containerPort: 1514
+              name: agents-events
+              protocol: TCP
+            - containerPort: 1516
+              name: cluster
+              protocol: TCP
+          {{- if .Values.manager.workers.startupProbe.enabled }}
+          startupProbe:
+            tcpSocket:
+              port: 1514
+            initialDelaySeconds: {{ .Values.manager.workers.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.manager.workers.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.manager.workers.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.manager.workers.startupProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.manager.workers.livenessProbe.enabled }}
+          livenessProbe:
+            tcpSocket:
+              port: 1514
+            initialDelaySeconds: {{ .Values.manager.workers.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.manager.workers.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.manager.workers.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.manager.workers.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.manager.workers.readinessProbe.enabled }}
+          readinessProbe:
+            tcpSocket:
+              port: 1514
+            initialDelaySeconds: {{ .Values.manager.workers.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.manager.workers.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.manager.workers.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.manager.workers.readinessProbe.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.manager.workers.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-manager-worker-conf
+        - name: wazuh-worker-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-worker-data
+        - name: wazuh-worker-filebeat
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-worker-filebeat
+        - name: wazuh-worker
+          secret:
+            secretName: {{ .Release.Name }}-worker
+            defaultMode: 0440
+        - name: wazuh-root
+          secret:
+            secretName: {{ .Release.Name }}-rootca-certificate
+            defaultMode: 0444
+        - name: wazuh-auth
+          secret:
+            secretName: {{ .Release.Name }}-auth
+            defaultMode: 0440
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-worker-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-manager
+    component: worker
+  {{- with .Values.manager.workers.pvcAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.manager.workers.persistence.accessMode }}
+  {{- if .Values.manager.workers.persistence.storageClass }}
+  storageClassName: {{ .Values.manager.workers.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.manager.workers.persistence.size }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-worker-filebeat
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-manager
+    component: worker-filebeat
+  {{- with .Values.manager.workers.pvcAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.manager.workers.persistence.accessMode }}
+  {{- if .Values.manager.workers.persistence.storageClass }}
+  storageClassName: {{ .Values.manager.workers.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.manager.workers.persistence.filebeatSize }}

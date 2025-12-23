@@ -26,8 +26,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: wazuh-manager
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
 spec:
   type: ClusterIP
   selector:
