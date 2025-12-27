@@ -6,7 +6,7 @@ wazuh:
 global:
   imagePullPolicy: IfNotPresent
 
-  storageClass: "longhorn-balanced"
+  storageClass: ""
 
   nodeSelector: {}
   tolerations: []
@@ -116,12 +116,11 @@ indexer:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 1
       maxUnavailable: 0
 
   persistence:
     enabled: true
-    size: 20Gi
+    size: 50Gi
     accessMode: ReadWriteOnce
 
   service:
@@ -129,7 +128,7 @@ indexer:
     port: 9200
     annotations: {}
 
-  javaOpts: "-Xms1g -Xmx1g"
+  javaOpts: "-Xms2g -Xmx2g"
 
 manager:
   master:
@@ -170,12 +169,11 @@ manager:
     strategy:
       type: RollingUpdate
       rollingUpdate:
-        maxSurge: 1
         maxUnavailable: 0
 
     persistence:
       enabled: true
-      size: 5Gi
+      size: 12Gi
       filebeatSize: 5Gi
       accessMode: ReadWriteOnce
 
@@ -230,7 +228,7 @@ manager:
 
     persistence:
       enabled: true
-      size: 5Gi
+      size: 12Gi
       filebeatSize: 2Gi
       accessMode: ReadWriteOnce
 
