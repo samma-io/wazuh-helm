@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint chart
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: helm lint chart/
+
+      - name: Template - defaults
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: helm template wazuh chart/ --namespace wazuh
+
+      - name: Template - ingress enabled
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: |
+            helm template wazuh chart/ --namespace wazuh \
+              --set ingress.enabled=true \
+              --set ingress.host=wazuh.example.com \
+              --set ingress.clusterIssuer=letsencrypt-prod
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Package chart
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: helm package chart/ --destination .
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Wazuh Helm Chart ${{ steps.version.outputs.VERSION }}"
+          generate_release_notes: true
+          files: "*.tgz"

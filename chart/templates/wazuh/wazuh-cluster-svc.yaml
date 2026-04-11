@@ -1,23 +1,16 @@
-# Copyright (C) 2018 Wazuh Inc.
-#
-# This program is a free software; you can redistribute it
-# and/or modify it under the terms of the GNU General Public
-# License (version 2) as published by the FSF - Free Software
-# Foundation.
-
-# Wazuh cluster Service: Manager nodes communication
-
+# Headless service used as serviceName for all StatefulSets (pod DNS identity)
 apiVersion: v1
 kind: Service
 metadata:
   name: wazuh-cluster
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
   labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
     app: wazuh-manager
 spec:
+  clusterIP: None
   selector:
     app: wazuh-manager
-    node-type: master
   ports:
     - name: cluster
       port: 1516

@@ -2,15 +2,19 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: wazuh-register-key
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
 data:
-  authd.pass: "CUSTOM_PASSWORD"
+  authd.pass: {{ .Values.credentials.agentRegistration | quote }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: wazuh-manager-master-conf
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
 data:
   ar.conf: |-
     #dead
@@ -121,7 +125,7 @@ data:
       <indexer>
         <enabled>yes</enabled>
         <hosts>
-          <host>https://wazuh-indexer.wazuh.svc:9200</host>
+          <host>https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200</host>
         </hosts>
         <ssl>
           <certificate_authorities>
@@ -304,7 +308,7 @@ data:
         <name>wazuh</name>
         <node_name>manager</node_name>
         <node_type>master</node_type>
-        <key>c98b6ha9b6169zc5f67rae55ae4z5647</key>
+        <key>{{ .Values.credentials.clusterKey }}</key>
         <port>1516</port>
         <bind_addr>0.0.0.0</bind_addr>
         <nodes>

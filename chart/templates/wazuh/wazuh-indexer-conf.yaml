@@ -2,7 +2,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: opensearch-yml
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
 data:
   opensearch.yml: |-
     network.host: "0.0.0.0"
@@ -40,12 +42,13 @@ data:
       ---
       # This is the internal user database
       # The hash value is a bcrypt hash and can be generated with plugin/tools/hash.sh
+      # NOTE: These hashes are pre-computed for the default credentials.
+      # If you change credentials.indexer.password or credentials.dashboard.password,
+      # update these hashes by running securityadmin.sh inside the indexer pod.
 
       _meta:
         type: "internalusers"
         config_version: 2
-
-      # Define your internal users here
 
       ## Demo users
 
@@ -92,4 +95,4 @@ data:
         reserved: false
         backend_roles:
         - "snapshotrestore"
-        description: "Demo snapshotrestore user" 
+        description: "Demo snapshotrestore user"

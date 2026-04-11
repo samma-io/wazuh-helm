@@ -1,8 +1,8 @@
-#######################################################################
-# A dedicated namespace to regroup resources of our experiment
-#######################################################################
-
-#apiVersion: v1
-#kind: Namespace
-#metadata:
-#  name: wazuh
+{{- if .Values.createNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
+{{- end }}

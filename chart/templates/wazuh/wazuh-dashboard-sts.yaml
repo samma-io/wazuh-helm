@@ -2,7 +2,9 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: wazuh-dashboard
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
@@ -39,21 +41,21 @@ spec:
           image: wazuh/wazuh-dashboard:{{ .Values.wazuh.tag }}
           env:
             - name: WAZUH_API_URL
-              value: "https://wazuh-manager.wazuh.svc"
+              value: "https://wazuh-manager.{{ .Release.Namespace }}.svc"
             - name: DASHBOARD_USERNAME
-              value: kibanaserver
+              value: {{ .Values.credentials.dashboard.username | quote }}
             - name: DASHBOARD_PASSWORD
-              value: kibanaserver
+              value: {{ .Values.credentials.dashboard.password | quote }}
             - name: API_USERNAME
-              value: wazuh-wui
+              value: {{ .Values.credentials.api.username | quote }}
             - name: API_PASSWORD
-              value: "MyS3cr37P450r.*-"
+              value: {{ .Values.credentials.api.password | quote }}
             - name: SERVER_HOST
               value: "0.0.0.0"
             - name: SERVER_PORT
               value: "5601"
             - name: OPENSEARCH_HOSTS
-              value: "https://wazuh-indexer.wazuh.svc:9200"
+              value: "https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200"
             - name: OPENSEARCH_SSL_VERIFICATIONMODE
               value: certificate
             - name: OPENSEARCH_REQUESTHEADERSALLOWLIST
@@ -72,6 +74,12 @@ spec:
               value: '["/usr/share/wazuh-dashboard/certs/root-ca.pem"]'
             - name: UISETTINGS_OVERRIDES_DEFAULTROUTE
               value: "/app/wz-home"
+          {{- with .Values.resources.dashboard }}
+          {{- if or .requests .limits }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- end }}
           volumeMounts:
             - name: wazuh-dasboard-config
               mountPath: /usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
@@ -99,8 +107,7 @@ spec:
           ports:
             - containerPort: 5601
               name: kibana
-      nodeSelector:
-        beta.kubernetes.io/arch: amd64
+      {{- include "wazuh.nodeSelector" . | nindent 6 }}
       volumes:
       - name: wazuh-dasboard-config
         configMap:
@@ -119,12 +126,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: wazuh-dashboard-data
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: wazuh-dashboard
 spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
+  {{- include "wazuh.pvcSpec" (dict "component" .Values.persistence.dashboard "storageClass" .Values.persistence.storageClass) | nindent 2 }}

@@ -1,0 +1,25 @@
+Wazuh {{ .Values.wazuh.tag }} deployed to namespace {{ .Release.Namespace }}.
+
+Dashboard:
+{{- if .Values.ingress.enabled }}
+  https://{{ .Values.ingress.host }}
+{{- else }}
+  kubectl port-forward -n {{ .Release.Namespace }} svc/wazuh-dashboard 5601:5601
+  Then open: https://localhost:5601
+{{- end }}
+
+Manager API:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/wazuh 55000:55000
+
+Agent registration (port 1515) and events (port 1514) are exposed via NodePort
+and LoadBalancer services respectively — these use TCP and cannot go through
+the HTTP Ingress.
+
+Default credentials (change for production):
+  Dashboard: {{ .Values.credentials.dashboard.username }} / <see values>
+  API:       {{ .Values.credentials.api.username }} / <see values>
+
+NOTE: The OpenSearch internal_users.yml contains pre-computed bcrypt hashes for
+the default passwords. If you change credentials.indexer.password or
+credentials.dashboard.password, you must also update the hashes by running
+securityadmin.sh inside the wazuh-indexer pod.

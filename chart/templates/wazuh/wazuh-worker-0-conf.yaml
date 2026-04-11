@@ -1,19 +1,13 @@
-# Copyright (C) 2018 Wazuh Inc.
-#
-# This program is a free software; you can redistribute it
-# and/or modify it under the terms of the GNU General Public
-# License (version 2) as published by the FSF - Free Software
-# Foundation.
-
 # Wazuh worker conf: 0
 
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: wazuh-manager-worker-0-conf
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
 data:
-  # /var/ossec/etc-template/ossec.conf
   ossec.conf: |-
     <ossec_config>
       <global>
@@ -121,7 +115,7 @@ data:
       <indexer>
         <enabled>yes</enabled>
         <hosts>
-          <host>https://wazuh-indexer.wazuh.svc:9200</host>
+          <host>https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200</host>
         </hosts>
         <ssl>
           <certificate_authorities>
@@ -304,11 +298,11 @@ data:
         <name>wazuh</name>
         <node_name>worker01</node_name>
         <node_type>worker</node_type>
-        <key>c98b6ha9b6169zc5f67rae55ae4z5647</key>
+        <key>{{ .Values.credentials.clusterKey }}</key>
         <port>1516</port>
         <bind_addr>0.0.0.0</bind_addr>
         <nodes>
-            <node>wazuh-manager.wazuh.svc</node>
+            <node>wazuh-manager.{{ .Release.Namespace }}.svc</node>
         </nodes>
         <hidden>no</hidden>
         <disabled>no</disabled>

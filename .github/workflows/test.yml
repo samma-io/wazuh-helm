@@ -1,0 +1,51 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint chart
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: helm lint chart/
+
+      - name: Template - defaults
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: helm template wazuh chart/ --namespace wazuh
+
+      - name: Template - ingress enabled
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: |
+            helm template wazuh chart/ --namespace wazuh \
+              --set ingress.enabled=true \
+              --set ingress.host=wazuh.example.com \
+              --set ingress.clusterIssuer=letsencrypt-prod
+
+      - name: Template - custom storageClass
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: |
+            helm template wazuh chart/ --namespace wazuh \
+              --set persistence.storageClass=longhorn
+
+      - name: Template - no nodeSelector
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: |
+            helm template wazuh chart/ --namespace wazuh \
+              --set 'nodeSelector={}'
+
+      - name: Template - custom namespace
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: helm template wazuh chart/ --namespace custom-ns

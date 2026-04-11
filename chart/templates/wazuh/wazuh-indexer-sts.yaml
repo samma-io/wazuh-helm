@@ -3,7 +3,9 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: wazuh-indexer
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
@@ -28,13 +30,13 @@ spec:
             chmod 774 /var/lib/wazuh-indexer;
         volumeMounts:
         - name: wazuh-indexer-data
-          mountPath: /var/lib/wazuh-indexer 
+          mountPath: /var/lib/wazuh-indexer
       containers:
         - name: wazuh-indexer
           image: wazuh/wazuh-indexer:{{ .Values.wazuh.tag }}
           env:
             - name: OPENSEARCH_JAVA_OPTS
-              value: "-Xms1g -Xmx1g"
+              value: {{ .Values.resources.indexer.javaOpts | quote }}
             - name: bootstrap.memory_lock
               value: "true"
             - name: NODE_NAME
@@ -91,19 +93,16 @@ spec:
               value: "false"
           resources:
             requests:
-              cpu: 200m
-              memory: 1024Mi
+              {{- toYaml .Values.resources.indexer.requests | nindent 14 }}
             limits:
-              cpu: 500m
-              memory: 2048Mi
+              {{- toYaml .Values.resources.indexer.limits | nindent 14 }}
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
-            fsGroup: 1000         
           volumeMounts:
-            -  name: opensearch-yml
-               mountPath: /usr/share/wazuh-indexer/config/opensearch.yml
-               subPath: opensearch.yml
+            - name: opensearch-yml
+              mountPath: /usr/share/wazuh-indexer/config/opensearch.yml
+              subPath: opensearch.yml
             - name: wazuh-indexer-data
               mountPath: /var/lib/wazuh-indexer
             - name: wazuh-root
@@ -122,14 +121,11 @@ spec:
               mountPath: /usr/share/wazuh-indexer/config/certs/admin-key.pem
               subPath: tls.key
           ports:
-            - containerPort: 1515
-              name: registration
-            - containerPort: 1516
-              name: cluster
-            - containerPort: 55000
-              name: api
-      nodeSelector:
-        beta.kubernetes.io/arch: amd64
+            - containerPort: 9200
+              name: opensearch
+            - containerPort: 9300
+              name: transport
+      {{- include "wazuh.nodeSelector" . | nindent 6 }}
       volumes:
       - name: wazuh-indexer-data
         persistentVolumeClaim:
@@ -138,15 +134,12 @@ spec:
         configMap:
           name: opensearch-yml
       - name: wazuh-root
-        defaultMode: 0666
         secret:
           secretName: wazuh-rootca-certificate
       - name: wazuh-indexer
-        defaultMode: 0666
         secret:
           secretName: wazuh-indexer
       - name: wazuh-admin
-        defaultMode: 0666
         secret:
           secretName: wazuh-admin
 ---
@@ -154,13 +147,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: wazuh-indexer-data
-  namespace: wazuh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: wazuh-indexer-data
 spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
----
+  {{- include "wazuh.pvcSpec" (dict "component" .Values.persistence.indexer "storageClass" .Values.persistence.storageClass) | nindent 2 }}

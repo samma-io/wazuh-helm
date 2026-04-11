@@ -1,0 +1,69 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types:
+      - completed
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint chart
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: helm lint chart/
+
+      - name: Template - defaults
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: helm template wazuh chart/ --namespace wazuh
+
+  deploy:
+    needs: test
+    runs-on: arc-runner-set-viodlar
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check out deploy manifest repo
+        uses: actions/checkout@v4
+        with:
+          repository: samma-io/deploy
+          ref: main
+          path: deploy
+          ssh-key: ${{ secrets.SAM_SSH }}
+
+      - name: Render chart to deploy manifest
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: |
+            helm template wazuh chart/ --namespace wazuh > deploy/wazuh/deploy.yaml
+            cat deploy/wazuh/deploy.yaml
+
+      - name: Commit and push rendered manifest
+        env:
+          CI_COMMIT_MESSAGE: Continuous Integration Build Artifacts
+          CI_COMMIT_AUTHOR: Continuous Integration
+        run: |
+          cd deploy
+          git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+          git config --global user.email "username@users.noreply.github.com"
+          git add wazuh/deploy.yaml
+          git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
+          git push
+
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {"text":"The repo ${{ github.repository }} is built and ready for cluster to deploy"}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
