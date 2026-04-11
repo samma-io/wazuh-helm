@@ -31,6 +31,8 @@ spec:
         volumeMounts:
         - name: wazuh-manager-master
           mountPath: /var/ossec/
+        - name: wazuh-alerts
+          mountPath: /var/ossec/logs/alerts/
       containers:
         - name: wazuh-manager
           image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
@@ -73,6 +75,8 @@ spec:
             - name: wazuh-manager-master
               subPath: logs
               mountPath: /var/ossec/logs
+            - name: wazuh-alerts
+              mountPath: /var/ossec/logs/alerts/
             - name: wazuh-manager-master
               subPath: queue
               mountPath: /var/ossec/queue
@@ -143,6 +147,8 @@ spec:
       - name: wazuh-filebeat-conf
         configMap:
           name: wazuh-filebeat-conf
+      - name: wazuh-alerts
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
