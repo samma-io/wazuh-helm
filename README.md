@@ -1,96 +1,242 @@
+# Wazuh on Kubernetes
 
-# Wazuh in Kubernetes
+A Helm chart for deploying the [Wazuh](https://wazuh.com) security platform on Kubernetes. Designed for development and testing environments with a single-replica setup for each component.
 
-This is a working Wazuh deployment tested in Kubernetes. It is currently a **static setup** with many **hardcoded values**, mainly intended for development and testing purposes.
-
-> ⚠️ Production deployment will require modifications for dynamic scaling, secrets management, and persistent storage configurations.
+> **Note:** This chart is intended for dev/test use. Production deployments require tuning of credentials, storage, resource limits, and HA configuration.
 
 ---
 
+## Prerequisites
 
-## Req
-This deploymedn need to be install in en k8s cluster before this chart
+The following must be installed in the cluster before deploying:
 
-- CertManager
-- Defaultstorge class
-- Only work in en wazuh namespace
+- **cert-manager** — manages all internal TLS certificates via self-signed PKI
+- **A default StorageClass** — PVCs are provisioned automatically
+- **Traefik** *(optional)* — required only if `ingress.enabled: true`
 
+---
 
-## Certificates (SSL/TLS)
-All certificate are setupo using Cert manager and you need to have it install in the cluster for the certs to be installed.
-All certs are then setup to the right pod fir usage
+## Installation
 
+### Quick start
+
+```bash
+helm upgrade --install wazuh ./chart \
+  --namespace wazuh \
+  --create-namespace
+```
+
+### With a custom values file
+
+```bash
+helm upgrade --install wazuh ./chart \
+  --namespace wazuh \
+  --create-namespace \
+  -f my-values.yaml
+```
+
+### With ingress and TLS
+
+```bash
+helm upgrade --install wazuh ./chart \
+  --namespace wazuh \
+  --create-namespace \
+  --set ingress.enabled=true \
+  --set ingress.host=wazuh.yourdomain.com \
+  --set ingress.clusterIssuer=letsencrypt-prod
+```
+
+When ingress is enabled, cert-manager provisions a publicly-trusted TLS certificate via the specified `ClusterIssuer`. Traefik forwards HTTPS traffic to the dashboard, which also has its own internal TLS (managed by the Wazuh internal PKI).
+
+### With a specific StorageClass
+
+```bash
+helm upgrade --install wazuh ./chart \
+  --namespace wazuh \
+  --create-namespace \
+  --set persistence.storageClass=longhorn
+```
+
+---
+
+## Architecture
+
+The chart deploys four StatefulSets in the target namespace:
+
+| Component | Image | Key ports |
+|---|---|---|
+| **Wazuh Indexer** (OpenSearch) | `wazuh/wazuh-indexer` | 9200 (API), 9300 (transport) |
+| **Wazuh Manager Master** | `wazuh/wazuh-manager` | 1515 (registration), 1516 (cluster), 55000 (API) |
+| **Wazuh Manager Worker** | `wazuh/wazuh-manager` | 1514 (agents), 1516 (cluster) |
+| **Wazuh Dashboard** | `wazuh/wazuh-dashboard` | 5601 |
+
+All images are versioned together via `wazuh.tag`.
+
+### Certificates
+
+cert-manager creates a self-signed root CA and issues component certificates for indexer, manager, worker, and dashboard. All internal pod-to-pod traffic is TLS-encrypted using this PKI.
+
+### Alert sharing
+
+Both manager pods expose `/var/ossec/logs/alerts/` as a shared `emptyDir` volume named `wazuh-alerts`. Sidecar containers added to the manager pods can mount this volume to consume alert files in real time:
+
+```yaml
+- name: wazuh-alerts
+  mountPath: /alerts
+  readOnly: true
+```
+
+### Agent connectivity
+
+Agent traffic uses TCP, not HTTP, and cannot be routed through an Ingress:
+
+| Purpose | Service | Type |
+|---|---|---|
+| Agent registration | `wazuh` | NodePort (1515) |
+| Agent events | `wazuh-workers` | LoadBalancer (1514) |
+| Manager API | `wazuh` | NodePort (55000) |
+
+---
 
 ## Access
 
-By default, **no external access is exposed** for the Wazuh Dashboard, API, or other components. You must either:
+### Dashboard (with ingress)
 
-- Create your own Kubernetes `Service` of type `LoadBalancer` or `NodePort`, **or**
-- Use `kubectl port-forward` for local access
+```
+https://<ingress.host>
+```
 
-### Dashbord
-The dashboard is exposed using a nodeport and you can access it over https.
-
-https://10.0.0.33:30272/
-
-### Default Credentials
-
-- **Username:** `admin`
-- **Password:** `admin`
-
-> ⚠️ These are the Wazuh defaults unless explicitly changed.
-
-
-### Manager
-Manager access is open with a loadbalancer. This is where you will be usingh to connect your clients.
-
-
-
-
----
-
-## Storage Requirements
-
-Make sure a **default StorageClass** is defined in your cluster. Persistent volumes will be automatically created based on this.
-
----
-
-## Deployment
-
-1. Clone the Wazuh deployment repository:
+### Dashboard (without ingress, port-forward)
 
 ```bash
-git clone https://github.com/samma-io/wazuh-helm
-cd wazuh-helm/chart
+kubectl port-forward -n wazuh svc/wazuh-dashboard 5601:5601
 ```
 
-> 🚧 No official release or versioning yet. Use the latest commit on `main`.
+Then open: `https://localhost:5601`
 
-2. Deploy using Helm:
+### Manager API (port-forward)
 
 ```bash
-helm upgrade --install wazuh . --namespace wazuh --create-namespace
+kubectl port-forward -n wazuh svc/wazuh 55000:55000
 ```
 
----
+### Default credentials
 
-## Additional Notes
+| Service | Username | Password (default) |
+|---|---|---|
+| Dashboard / Indexer | `admin` | `admin` |
+| Dashboard internal | `kibanaserver` | `kibanaserver` |
+| Wazuh API | `wazuh-wui` | `MyS3cr37P450r.*-` |
 
-- This setup does **not yet support autoscaling or horizontal pods**.
-- Ideal for isolated environments, POCs, and integration testing.
-- Configuration, logging, and scaling will need tuning before moving to production.
-
----
-
-## Roadmap / To-Do
-
-- [ ] Dynamic secret generation with cert-manager
-- [ ] Ingress controller support (NGINX/Traefik)
-- [ ] Production-grade Helm chart with values schema
-- [ ] CI/CD integration for Wazuh container builds
+> **Important:** The Wazuh Indexer (OpenSearch) stores credentials as bcrypt hashes in `internal_users.yml`. Changing `credentials.indexer.password` or `credentials.dashboard.password` in values only updates env vars — you must also update the hashes by running `securityadmin.sh` inside the indexer pod.
 
 ---
 
+## Values Reference
+
+### Image
+
+| Value | Default | Description |
+|---|---|---|
+| `wazuh.tag` | `"4.14.0"` | Image tag for all Wazuh components |
+
+### General
+
+| Value | Default | Description |
+|---|---|---|
+| `createNamespace` | `false` | Create the namespace as part of the release (alternative to `--create-namespace`) |
+| `nodeSelector` | `kubernetes.io/arch: amd64` | Node selector applied to all StatefulSets. Set to `{}` to disable |
+
+### Credentials
+
+| Value | Default | Description |
+|---|---|---|
+| `credentials.indexer.username` | `admin` | OpenSearch admin username |
+| `credentials.indexer.password` | `admin` | OpenSearch admin password |
+| `credentials.api.username` | `wazuh-wui` | Wazuh API service account username |
+| `credentials.api.password` | `MyS3cr37P450r.*-` | Wazuh API service account password |
+| `credentials.dashboard.username` | `kibanaserver` | Dashboard internal OpenSearch username |
+| `credentials.dashboard.password` | `kibanaserver` | Dashboard internal OpenSearch password |
+| `credentials.agentRegistration` | `CUSTOM_PASSWORD` | Agent registration password (`authd.pass`) |
+| `credentials.clusterKey` | `c98b6ha9b6169zc5f67rae55ae4z5647` | Wazuh cluster key — must be identical on master and all workers |
+
+### Certificates
+
+| Value | Default | Description |
+|---|---|---|
+| `certs.duration` | `2160h` | Lifetime of internal component certificates (90 days) |
+| `certs.renewBefore` | `360h` | How early cert-manager renews certificates (15 days) |
+
+### Persistence
+
+All PVCs use the cluster default StorageClass unless `persistence.storageClass` is set.
+
+| Value | Default | Description |
+|---|---|---|
+| `persistence.storageClass` | `""` | StorageClass for all PVCs. `""` uses the cluster default |
+| `persistence.master.size` | `10Gi` | Manager master data volume |
+| `persistence.master.accessMode` | `ReadWriteOnce` | |
+| `persistence.masterFilebeat.size` | `5Gi` | Manager master Filebeat state volume |
+| `persistence.masterFilebeat.accessMode` | `ReadWriteOnce` | |
+| `persistence.worker.size` | `20Gi` | Manager worker data volume |
+| `persistence.worker.accessMode` | `ReadWriteOnce` | |
+| `persistence.workerFilebeat.size` | `5Gi` | Manager worker Filebeat state volume |
+| `persistence.workerFilebeat.accessMode` | `ReadWriteOnce` | |
+| `persistence.indexer.size` | `50Gi` | Indexer (OpenSearch) data volume |
+| `persistence.indexer.accessMode` | `ReadWriteOnce` | |
+| `persistence.dashboard.size` | `5Gi` | Dashboard config and assets volume |
+| `persistence.dashboard.accessMode` | `ReadWriteOnce` | |
+
+### Resources
+
+| Value | Default | Description |
+|---|---|---|
+| `resources.manager.requests.cpu` | `200m` | CPU request for master and worker manager pods |
+| `resources.manager.requests.memory` | `1024Mi` | Memory request for manager pods |
+| `resources.manager.limits.cpu` | `500m` | CPU limit for manager pods |
+| `resources.manager.limits.memory` | `2048Mi` | Memory limit for manager pods |
+| `resources.indexer.requests.cpu` | `200m` | CPU request for indexer pod |
+| `resources.indexer.requests.memory` | `1024Mi` | Memory request for indexer pod |
+| `resources.indexer.limits.cpu` | `500m` | CPU limit for indexer pod |
+| `resources.indexer.limits.memory` | `2048Mi` | Memory limit for indexer pod |
+| `resources.indexer.javaOpts` | `"-Xms1g -Xmx1g"` | JVM heap size for OpenSearch — keep in sync with memory limits |
+| `resources.dashboard.requests` | `{}` | CPU/memory requests for dashboard (unset by default) |
+| `resources.dashboard.limits` | `{}` | CPU/memory limits for dashboard (unset by default) |
+
+### Filebeat
+
+| Value | Default | Description |
+|---|---|---|
+| `filebeat.sslVerificationMode` | `full` | SSL verification mode for Filebeat → Indexer connection (`full`, `certificate`, `none`) |
+
+### Dashboard
+
+| Value | Default | Description |
+|---|---|---|
+| `dashboard.serviceType` | `ClusterIP` | Service type for the dashboard. Use `NodePort` when ingress is disabled and you want direct cluster access |
+
+### Ingress (Traefik)
+
+The Wazuh Dashboard can be exposed publicly via a Traefik Ingress with TLS termination by cert-manager. The internal Wazuh PKI (pod-to-pod) is independent of the ingress certificate.
+
+| Value | Default | Description |
+|---|---|---|
+| `ingress.enabled` | `false` | Enable the Traefik Ingress for the dashboard |
+| `ingress.ingressClassName` | `traefik` | IngressClass to use |
+| `ingress.host` | `wazuh.example.com` | Hostname for the dashboard Ingress rule and TLS SAN |
+| `ingress.clusterIssuer` | `letsencrypt-prod` | cert-manager `ClusterIssuer` name used to issue the public TLS certificate |
+| `ingress.tlsSecretName` | `wazuh-dashboard-ingress-tls` | Name of the Secret cert-manager creates to store the TLS keypair |
+
+---
+
+## Upgrading
+
+```bash
+helm upgrade wazuh ./chart --namespace wazuh
 ```
 
-Let me know if you'd like a full example Helm values file, Kubernetes secret manifest, or ingress setup next!
+> **Note:** Changing `clusterIP` on existing services (e.g. the first time `wazuh-cluster` was converted to headless) requires deleting the service first:
+> ```bash
+> kubectl delete service wazuh-cluster -n wazuh
+> helm upgrade wazuh ./chart --namespace wazuh
+> ```
