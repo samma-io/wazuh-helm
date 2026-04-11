@@ -74,6 +74,9 @@ resources:
     requests: {}
     limits: {}
 
+filebeat:
+  sslVerificationMode: "full"
+
 dashboard:
   # Use NodePort for direct access without Ingress, ClusterIP when Ingress is enabled
   serviceType: ClusterIP

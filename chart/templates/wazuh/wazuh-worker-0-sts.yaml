@@ -103,6 +103,10 @@ spec:
             - name: wazuh-filebeat
               subPath: var
               mountPath: /var/lib/filebeat
+            - name: wazuh-filebeat-conf
+              mountPath: /etc/filebeat/filebeat.yml
+              subPath: filebeat.yml
+              readOnly: true
             - name: wazuh-worker
               mountPath: /etc/ssl/filebeat.key
               subPath: tls.key
@@ -137,6 +141,9 @@ spec:
         - name: wazuh-filebeat
           persistentVolumeClaim:
             claimName: wazuh-worker-filebeat
+        - name: wazuh-filebeat-conf
+          configMap:
+            name: wazuh-filebeat-conf
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
