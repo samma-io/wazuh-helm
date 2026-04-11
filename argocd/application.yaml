@@ -1,0 +1,100 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wazuh
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:samma-io/wazuh-helm.git
+    targetRevision: HEAD
+    path: chart
+    helm:
+      values: |
+        wazuh:
+          tag: "4.14.0"
+
+        nodeSelector:
+          kubernetes.io/arch: amd64
+
+        credentials:
+          indexer:
+            username: admin
+            password: admin
+          api:
+            username: wazuh-wui
+            password: "MyS3cr37P450r.*-"
+          dashboard:
+            username: kibanaserver
+            password: kibanaserver
+          agentRegistration: "CUSTOM_PASSWORD"
+          clusterKey: "c98b6ha9b6169zc5f67rae55ae4z5647"
+
+        certs:
+          duration: "2160h"
+          renewBefore: "360h"
+
+        persistence:
+          storageClass: ""
+          master:
+            size: 10Gi
+            accessMode: ReadWriteOnce
+          masterFilebeat:
+            size: 5Gi
+            accessMode: ReadWriteOnce
+          worker:
+            size: 20Gi
+            accessMode: ReadWriteOnce
+          workerFilebeat:
+            size: 5Gi
+            accessMode: ReadWriteOnce
+          indexer:
+            size: 50Gi
+            accessMode: ReadWriteOnce
+          dashboard:
+            size: 5Gi
+            accessMode: ReadWriteOnce
+
+        resources:
+          manager:
+            requests:
+              cpu: 200m
+              memory: 1024Mi
+            limits:
+              cpu: 500m
+              memory: 2048Mi
+          indexer:
+            requests:
+              cpu: 200m
+              memory: 1024Mi
+            limits:
+              cpu: 500m
+              memory: 2048Mi
+            javaOpts: "-Xms1g -Xmx1g"
+          dashboard:
+            requests: {}
+            limits: {}
+
+        filebeat:
+          sslVerificationMode: "full"
+
+        dashboard:
+          serviceType: ClusterIP
+
+        ingress:
+          enabled: false
+          ingressClassName: traefik
+          host: wazuh.example.com
+          clusterIssuer: "letsencrypt-prod"
+          tlsSecretName: wazuh-dashboard-ingress-tls
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: wazuh
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
