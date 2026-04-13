@@ -97,12 +97,12 @@ spec:
               mountPath: /var/ossec/wodles
             - name: wazuh-filebeat
               subPath: etc
-              mountPath: /etc/filebeat
+              mountPath: /var/ossec/data_tmp/permanent/etc/filebeat
             - name: wazuh-filebeat
               subPath: var
               mountPath: /var/lib/filebeat
             - name: wazuh-filebeat-conf
-              mountPath: /etc/filebeat/filebeat.yml
+              mountPath: /var/ossec/data_tmp/permanent/etc/filebeat/filebeat.yml
               subPath: filebeat.yml
               readOnly: true
             - name: wazuh-manager

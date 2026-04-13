@@ -17,7 +17,7 @@ data:
 
     setup.template.json.enabled: true
     setup.template.overwrite: true
-    setup.template.json.path: '/etc/filebeat/wazuh-template.json'
+    setup.template.json.path: '/var/ossec/data_tmp/permanent/etc/filebeat/wazuh-template.json'
     setup.template.json.name: 'wazuh'
     setup.ilm.enabled: false
     output.elasticsearch:
