@@ -95,16 +95,6 @@ spec:
             - name: wazuh-manager-master
               subPath: wodles
               mountPath: /var/ossec/wodles
-            - name: wazuh-filebeat
-              subPath: etc
-              mountPath: /var/ossec/data_tmp/permanent/etc/filebeat
-            - name: wazuh-filebeat
-              subPath: var
-              mountPath: /var/lib/filebeat
-            - name: wazuh-filebeat-conf
-              mountPath: /var/ossec/data_tmp/permanent/etc/filebeat/filebeat.yml
-              subPath: filebeat.yml
-              readOnly: true
             - name: wazuh-manager
               mountPath: /etc/ssl/filebeat.key
               subPath: tls.key
@@ -129,9 +119,6 @@ spec:
       - name: wazuh-manager-master
         persistentVolumeClaim:
           claimName: wazuh-manager-master
-      - name: wazuh-filebeat
-        persistentVolumeClaim:
-          claimName: wazuh-manager-filebeat
       - name: config
         configMap:
           name: wazuh-manager-master-conf
@@ -144,9 +131,6 @@ spec:
       - name: wazuh-root
         secret:
           secretName: wazuh-rootca-certificate
-      - name: wazuh-filebeat-conf
-        configMap:
-          name: wazuh-filebeat-conf
       - name: wazuh-alerts
         emptyDir: {}
 ---
@@ -159,13 +143,3 @@ metadata:
     app: wazuh-manager-master
 spec:
   {{- include "wazuh.pvcSpec" (dict "component" .Values.persistence.master "storageClass" .Values.persistence.storageClass) | nindent 2 }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: wazuh-manager-filebeat
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app: wazuh-manager-master
-spec:
-  {{- include "wazuh.pvcSpec" (dict "component" .Values.persistence.masterFilebeat "storageClass" .Values.persistence.storageClass) | nindent 2 }}

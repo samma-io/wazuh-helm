@@ -39,14 +39,8 @@ spec:
           master:
             size: 10Gi
             accessMode: ReadWriteOnce
-          masterFilebeat:
-            size: 5Gi
-            accessMode: ReadWriteOnce
           worker:
             size: 20Gi
-            accessMode: ReadWriteOnce
-          workerFilebeat:
-            size: 5Gi
             accessMode: ReadWriteOnce
           indexer:
             size: 50Gi
@@ -74,9 +68,6 @@ spec:
           dashboard:
             requests: {}
             limits: {}
-
-        filebeat:
-          sslVerificationMode: "full"
 
         dashboard:
           serviceType: ClusterIP
