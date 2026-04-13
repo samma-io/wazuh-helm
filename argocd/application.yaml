@@ -84,9 +84,9 @@ spec:
         ingress:
           enabled: true
           ingressClassName: traefik
-          host: wazuh.v2.local
-          issuerKind: "Issuer"
-          clusterIssuer: "wazuh-rootca-issuer"
+          host: wazuh.samma.io
+          issuerKind: "ClusterIssuer"
+          clusterIssuer: "http"
           tlsSecretName: wazuh-dashboard-ingress-tls
 
   destination:
