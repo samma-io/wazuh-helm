@@ -82,10 +82,11 @@ spec:
           serviceType: ClusterIP
 
         ingress:
-          enabled: false
+          enabled: true
           ingressClassName: traefik
-          host: wazuh.example.com
-          clusterIssuer: "letsencrypt-prod"
+          host: wazuh.v2.local
+          issuerKind: "Issuer"
+          clusterIssuer: "wazuh-rootca-issuer"
           tlsSecretName: wazuh-dashboard-ingress-tls
 
   destination:

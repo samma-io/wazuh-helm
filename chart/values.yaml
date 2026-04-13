@@ -86,7 +86,9 @@ ingress:
   enabled: false
   ingressClassName: traefik
   host: wazuh.example.com
-  # Name of a cert-manager ClusterIssuer to provision the public TLS certificate
+  # "ClusterIssuer" for public certs (e.g. letsencrypt), "Issuer" for namespace-scoped (e.g. local dev)
+  issuerKind: "ClusterIssuer"
+  # Name of the cert-manager issuer to provision the TLS certificate
   clusterIssuer: "letsencrypt-prod"
   # Secret name where cert-manager stores the provisioned TLS keypair
   tlsSecretName: wazuh-dashboard-ingress-tls
