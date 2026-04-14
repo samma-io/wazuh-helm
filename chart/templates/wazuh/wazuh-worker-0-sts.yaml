@@ -42,6 +42,10 @@ spec:
           - chown -R wazuh:wazuh /var/ossec/;
             mkdir -p /var/ossec/etc/shared/;
             echo "#clean" > /var/ossec/etc/shared/ar.conf;
+            mkdir -p /var/ossec/queue/cluster/;
+            mkdir -p /var/ossec/queue/rids/;
+            mkdir -p /var/ossec/logs/firewall/;
+            mkdir -p /var/ossec/logs/archives/;
         volumeMounts:
         - name: wazuh-worker-master
           mountPath: /var/ossec/
