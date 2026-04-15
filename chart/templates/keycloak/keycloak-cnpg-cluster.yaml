@@ -1,0 +1,19 @@
+{{- if .Values.keycloak.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: keycloak-pg
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
+spec:
+  instances: 1
+  storage:
+    size: {{ .Values.keycloak.db.storageSize }}
+  bootstrap:
+    initdb:
+      database: {{ .Values.keycloak.db.name }}
+      owner: {{ .Values.keycloak.db.username }}
+      secret:
+        name: keycloak-secret
+{{- end }}

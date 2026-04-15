@@ -89,6 +89,27 @@ spec:
             maxReplicas: 10
             targetCPUUtilizationPercentage: 70
 
+        keycloak:
+          enabled: true
+          tag: "23.0.6"
+          realm: master
+          clientSecret: "CHANGE_ME"
+          admin:
+            username: admin
+            password: "CHANGE_ME"
+          db:
+            name: keycloak
+            username: keycloak
+            password: "CHANGE_ME"
+            storageSize: 10Gi
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+
         ingress:
           enabled: true
           ingressClassName: traefik

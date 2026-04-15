@@ -89,6 +89,30 @@ ingestAgent:
     maxReplicas: 10
     targetCPUUtilizationPercentage: 70
 
+keycloak:
+  enabled: false
+  image: quay.io/keycloak/keycloak
+  tag: "23.0.6"
+  # realm used in OpenID connect URLs
+  realm: master
+  # clientSecret from Keycloak's wazuh client Credentials tab
+  clientSecret: "CHANGE_ME"
+  admin:
+    username: admin
+    password: "CHANGE_ME"
+  db:
+    name: keycloak
+    username: keycloak
+    password: "CHANGE_ME"
+    storageSize: 10Gi
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
 # Traefik Ingress for the Wazuh Dashboard (HTTPS)
 ingress:
   enabled: false

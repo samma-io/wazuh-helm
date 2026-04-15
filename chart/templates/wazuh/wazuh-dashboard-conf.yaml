@@ -19,6 +19,15 @@ data:
       server.ssl.certificate: "/usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem"
       opensearch.ssl.certificateAuthorities: ["/usr/share/wazuh-dashboard/certs/root-ca.pem"]
       uiSettings.overrides.defaultRoute: /app/wz-home
+      {{- if .Values.keycloak.enabled }}
+      opensearch_security.auth.type: "openid"
+      opensearch_security.openid.connect_url: "http://keycloak.{{ .Release.Namespace }}.svc/auth/realms/{{ .Values.keycloak.realm }}/.well-known/openid-configuration"
+      opensearch_security.openid.client_id: "wazuh"
+      opensearch_security.openid.client_secret: {{ .Values.keycloak.clientSecret | quote }}
+      opensearch_security.openid.scope: "openid profile email"
+      opensearch_security.openid.base_redirect_url: "https://{{ .Values.ingress.host }}"
+      opensearch_security.openid.logout_url: "https://{{ .Values.ingress.host }}/auth/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/logout"
+      {{- end }}
   wazuh.yml: |-
       hosts:
       - 1513629884013:

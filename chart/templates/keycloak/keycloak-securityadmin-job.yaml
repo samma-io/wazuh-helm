@@ -1,0 +1,67 @@
+{{- if .Values.keycloak.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: wazuh-securityadmin
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-indexer
+          image: curlimages/curl:latest
+          command:
+            - sh
+            - -c
+            - |
+              until curl -sk https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200 -u '{{ .Values.credentials.indexer.username }}:{{ .Values.credentials.indexer.password }}' | grep -q '"status"'; do
+                echo "Waiting for wazuh-indexer..."
+                sleep 10
+              done
+              echo "Indexer is ready."
+      containers:
+        - name: securityadmin
+          image: wazuh/wazuh-indexer:{{ .Values.wazuh.tag }}
+          command:
+            - bash
+            - -c
+            - |
+              export JAVA_HOME=/usr/share/wazuh-indexer/jdk/
+              bash /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh \
+                -f /opensearch-security/config.yml \
+                -icl \
+                -key /certs/tls.key \
+                -cert /certs/tls.crt \
+                -cacert /ca/ca.crt \
+                -h wazuh-indexer.{{ .Release.Namespace }}.svc \
+                -nhnv
+          volumeMounts:
+            - name: admin-certs
+              mountPath: /certs
+              readOnly: true
+            - name: root-ca
+              mountPath: /ca
+              readOnly: true
+            - name: security-config
+              mountPath: /opensearch-security
+              readOnly: true
+      volumes:
+        - name: admin-certs
+          secret:
+            secretName: wazuh-admin
+        - name: root-ca
+          secret:
+            secretName: wazuh-rootca-certificate
+        - name: security-config
+          configMap:
+            name: opensearch-security-config
+      {{- include "wazuh.nodeSelector" . | nindent 6 }}
+{{- end }}

@@ -27,6 +27,14 @@ spec:
   entryPoints:
     - websecure
   routes:
+    {{- if .Values.keycloak.enabled }}
+    - match: Host(`{{ .Values.ingress.host }}`) && PathPrefix(`/auth`)
+      kind: Rule
+      priority: 10
+      services:
+        - name: keycloak
+          port: 80
+    {{- end }}
     - match: Host(`{{ .Values.ingress.host }}`)
       kind: Rule
       services:
