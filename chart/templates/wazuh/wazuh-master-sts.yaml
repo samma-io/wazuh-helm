@@ -25,7 +25,7 @@ spec:
         image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
         command: ["/bin/sh", "-c"]
         args:
-          - mkdir -p /var/ossec/etc/shared/;
+          - mkdir -p /var/ossec/etc/shared/default/;
             mkdir -p /var/ossec/queue/cluster/;
             mkdir -p /var/ossec/queue/rids/;
             mkdir -p /var/ossec/queue/db/;
