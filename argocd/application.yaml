@@ -92,8 +92,8 @@ spec:
         keycloak:
           enabled: true
           tag: "23.0.6"
-          realm: master
-          clientSecret: "CHANGE_ME"
+          realm: wazuh
+          clientSecret: "2nZSzY93xS4fVjycngVfcYDp0nKdnFao"
           admin:
             username: admin
             password: "CHANGE_ME"

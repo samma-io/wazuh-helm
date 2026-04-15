@@ -94,9 +94,9 @@ keycloak:
   image: quay.io/keycloak/keycloak
   tag: "23.0.6"
   # realm used in OpenID connect URLs
-  realm: master
-  # clientSecret from Keycloak's wazuh client Credentials tab
-  clientSecret: "CHANGE_ME"
+  realm: wazuh
+  # clientSecret for the 'wazuh' OIDC client — seeded into Keycloak on first boot
+  clientSecret: "2nZSzY93xS4fVjycngVfcYDp0nKdnFao"
   admin:
     username: admin
     password: "CHANGE_ME"

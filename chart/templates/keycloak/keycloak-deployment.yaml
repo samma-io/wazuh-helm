@@ -22,6 +22,7 @@ spec:
           image: "{{ .Values.keycloak.image }}:{{ .Values.keycloak.tag }}"
           args:
             - start
+            - --import-realm
           env:
             - name: KC_DB
               value: postgres
@@ -75,7 +76,15 @@ spec:
             initialDelaySeconds: 60
             periodSeconds: 30
             failureThreshold: 5
+          volumeMounts:
+            - name: realm-import
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
           resources:
             {{- toYaml .Values.keycloak.resources | nindent 12 }}
+      volumes:
+        - name: realm-import
+          configMap:
+            name: keycloak-realm
       {{- include "wazuh.nodeSelector" . | nindent 6 }}
 {{- end }}
