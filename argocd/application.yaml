@@ -96,11 +96,11 @@ spec:
           clientSecret: "2nZSzY93xS4fVjycngVfcYDp0nKdnFao"
           admin:
             username: admin
-            password: "CHANGE_ME"
+            password: "Admin1234!"
           db:
             name: keycloak
             username: keycloak
-            password: "CHANGE_ME"
+            password: "Keycloak1234!"
             storageSize: 10Gi
           resources:
             requests:
