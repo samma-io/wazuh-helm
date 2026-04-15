@@ -31,8 +31,6 @@ spec:
               value: "wazuh-workers.{{ .Release.Namespace }}.svc"
             - name: SERVER_PORT
               value: "1514"
-            - name: GROUP
-              value: {{ .Values.ingestAgent.group | quote }}
             - name: NAME
               valueFrom:
                 fieldRef:
