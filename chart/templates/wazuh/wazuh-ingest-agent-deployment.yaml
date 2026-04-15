@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-ingest-agent
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.ingestAgent.replicas }}
+  selector:
+    matchLabels:
+      app: wazuh-ingest-agent
+  template:
+    metadata:
+      labels:
+        app: wazuh-ingest-agent
+        {{- include "wazuh.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: wazuh-ingest-agent
+          image: "{{ .Values.ingestAgent.image }}:{{ .Values.ingestAgent.tag }}"
+          ports:
+            - containerPort: 5000
+              name: ingest
+          env:
+            - name: MANAGER_URL
+              value: "wazuh-manager.{{ .Release.Namespace }}.svc"
+            - name: MANAGER_PORT
+              value: "1515"
+            - name: SERVER_URL
+              value: "wazuh-workers.{{ .Release.Namespace }}.svc"
+            - name: SERVER_PORT
+              value: "1514"
+            - name: GROUP
+              value: {{ .Values.ingestAgent.group | quote }}
+            - name: NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: ENROL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-agent-enroll
+                  key: enroll-token
+          resources:
+            {{- toYaml .Values.ingestAgent.resources | nindent 12 }}
+      {{- include "wazuh.nodeSelector" . | nindent 6 }}

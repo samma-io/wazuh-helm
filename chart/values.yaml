@@ -72,6 +72,23 @@ dashboard:
   # Use NodePort for direct access without Ingress, ClusterIP when Ingress is enabled
   serviceType: ClusterIP
 
+ingestAgent:
+  image: ghcr.io/samma-io/wazuh-agent
+  tag: "main"
+  replicas: 3
+  group: "default"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  hpa:
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
 # Traefik Ingress for the Wazuh Dashboard (HTTPS)
 ingress:
   enabled: false

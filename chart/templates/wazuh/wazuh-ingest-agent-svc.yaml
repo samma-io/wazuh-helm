@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-ingest-agent
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: wazuh-ingest-agent
+  ports:
+    - port: 5000
+      targetPort: 5000
+      name: ingest
