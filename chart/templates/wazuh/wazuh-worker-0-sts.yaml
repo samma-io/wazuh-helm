@@ -49,6 +49,7 @@ spec:
             mkdir -p /var/ossec/queue/keystore/;
             mkdir -p /var/ossec/queue/router/;
             mkdir -p /var/ossec/queue/vd/;
+            mkdir -p /var/ossec/queue/fim/db/;
             mkdir -p /var/ossec/logs/firewall/;
             mkdir -p /var/ossec/logs/archives/;
             echo "#clean" > /var/ossec/etc/shared/ar.conf;
