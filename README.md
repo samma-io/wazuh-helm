@@ -166,8 +166,9 @@ Add to your values file:
 keycloak:
   enabled: true
   tag: "23.0.6"
+  path: "/login"        # all /login/* traffic goes to Keycloak
   realm: wazuh
-  clientSecret: "CHANGE_ME"      # set to a random string, copy into Keycloak client later
+  clientSecret: "CHANGE_ME"
   admin:
     username: admin
     password: "CHANGE_ME"
@@ -178,21 +179,23 @@ keycloak:
     storageSize: 10Gi
 ```
 
-On first install, Keycloak imports a pre-seeded realm (`wazuh`) containing:
+On first install, Keycloak imports a pre-seeded `wazuh` realm containing:
 
-- A `wazuh` OIDC client configured for the dashboard
+- A `wazuh` OIDC client with `preferred_username`, `email`, and `groups` claim mappers
 - A `groups` scope that passes group membership as an OIDC claim
 - Three groups: `admin`, `security_analytics_full_access`, `security_analytics_read_access`
 
-Keycloak is exposed at `https://<ingress.host>/auth`. The Wazuh Dashboard at `https://<ingress.host>` redirects unauthenticated users there automatically.
+Keycloak is exposed at `https://<ingress.host>/login`. The Wazuh Dashboard at `https://<ingress.host>` redirects unauthenticated users there automatically.
 
 ### Post-install: create your first user
 
-1. Open `https://<ingress.host>/auth` and log in with the admin credentials from values
-2. Switch to the `wazuh` realm
-3. Create a user under **Users** and assign them to the `admin` group
-4. Enable an MFA credential (TOTP or WebAuthn) under the user's **Credentials** tab
-5. Log out, then open `https://<ingress.host>` — you should be redirected to Keycloak and prompted for MFA
+1. Open `https://<ingress.host>/login` and log in with the Keycloak admin credentials from values
+2. Switch to the **wazuh** realm (top-left dropdown)
+3. Go to **Users** → **Add user**, set a username, save
+4. Under the **Credentials** tab set a password
+5. Under the **Groups** tab assign the user to `admin`
+6. Under the **Credentials** tab add a TOTP or WebAuthn credential to enforce MFA
+7. Log out, then open `https://<ingress.host>` — you will be redirected to Keycloak and prompted for MFA
 
 ### Connecting an external identity provider
 
@@ -306,7 +309,7 @@ The Wazuh Dashboard can be exposed publicly via a Traefik Ingress with TLS termi
 |---|---|---|
 | `keycloak.enabled` | `false` | Deploy Keycloak and configure the dashboard for OIDC login |
 | `keycloak.tag` | `"23.0.6"` | Keycloak image tag |
-| `keycloak.path` | `"/login"` | URL path prefix Keycloak is served under. All traffic under this path goes to Keycloak |
+| `keycloak.path` | `"/login"` | URL path prefix Keycloak is served under. All `/login/*` traffic goes to Keycloak. Must not overlap with `/auth/openid` (the dashboard's OIDC callback path) |
 | `keycloak.realm` | `wazuh` | Keycloak realm name — must match the auto-imported realm JSON |
 | `keycloak.clientSecret` | `"CHANGE_ME"` | OIDC client secret shared between Keycloak and the dashboard |
 | `keycloak.admin.username` | `admin` | Keycloak master realm admin username |
