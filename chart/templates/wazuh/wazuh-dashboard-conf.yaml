@@ -24,7 +24,7 @@ data:
       opensearch_security.openid.connect_url: "http://keycloak.{{ .Release.Namespace }}.svc{{ .Values.keycloak.path }}/realms/{{ .Values.keycloak.realm }}/.well-known/openid-configuration"
       opensearch_security.openid.client_id: "wazuh"
       opensearch_security.openid.client_secret: {{ .Values.keycloak.clientSecret | quote }}
-      opensearch_security.openid.scope: "openid profile email"
+      opensearch_security.openid.scope: "openid"
       opensearch_security.openid.base_redirect_url: "https://{{ .Values.ingress.host }}"
       opensearch_security.openid.logout_url: "https://{{ .Values.ingress.host }}{{ .Values.keycloak.path }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/logout"
       {{- end }}

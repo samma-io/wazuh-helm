@@ -61,12 +61,8 @@ data:
           "protocol": "openid-connect",
           "redirectUris": ["https://{{ .Values.ingress.host }}/*"],
           "webOrigins": ["https://{{ .Values.ingress.host }}"],
-          "defaultClientScopes": [
-            "web-origins", "acr", "profile", "roles", "groups", "email"
-          ],
-          "optionalClientScopes": [
-            "address", "phone", "offline_access", "microprofile-jwt"
-          ],
+          "defaultClientScopes": ["groups"],
+          "optionalClientScopes": [],
           "protocolMappers": [
             {
               "name": "audience",
@@ -77,6 +73,34 @@ data:
                 "included.client.audience": "wazuh",
                 "id.token.claim": "false",
                 "access.token.claim": "true"
+              }
+            },
+            {
+              "name": "preferred_username",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-usermodel-property-mapper",
+              "consentRequired": false,
+              "config": {
+                "userinfo.token.claim": "true",
+                "user.attribute": "username",
+                "id.token.claim": "true",
+                "access.token.claim": "true",
+                "claim.name": "preferred_username",
+                "jsonType.label": "String"
+              }
+            },
+            {
+              "name": "email",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-usermodel-property-mapper",
+              "consentRequired": false,
+              "config": {
+                "userinfo.token.claim": "true",
+                "user.attribute": "email",
+                "id.token.claim": "true",
+                "access.token.claim": "true",
+                "claim.name": "email",
+                "jsonType.label": "String"
               }
             }
           ]
