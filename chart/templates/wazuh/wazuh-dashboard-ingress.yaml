@@ -28,6 +28,13 @@ spec:
     - websecure
   routes:
     {{- if .Values.keycloak.enabled }}
+    - match: Host(`{{ .Values.ingress.host }}`) && PathPrefix(`/auth/openid`)
+      kind: Rule
+      priority: 20
+      services:
+        - name: wazuh-dashboard
+          port: 5601
+          scheme: https
     - match: Host(`{{ .Values.ingress.host }}`) && PathPrefix(`/auth`)
       kind: Rule
       priority: 10
