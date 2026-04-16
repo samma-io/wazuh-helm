@@ -38,6 +38,10 @@ spec:
   duration: {{ .Values.certs.duration }}
   renewBefore: {{ .Values.certs.renewBefore }}
   commonName: wazuh-admin.{{ .Release.Namespace }}.svc
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS8
+    size: 2048
   dnsNames:
   - wazuh-indexer
   - wazuh-indexer.{{ .Release.Namespace }}.svc
