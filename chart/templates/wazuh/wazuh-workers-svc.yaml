@@ -10,6 +10,7 @@ metadata:
     app: wazuh-manager
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+    argocd.argoproj.io/ignore-health: "true"
 spec:
   type: LoadBalancer
   selector:
