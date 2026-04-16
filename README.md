@@ -13,6 +13,17 @@ The following must be installed in the cluster before deploying:
 - **cert-manager** — manages all internal TLS certificates via self-signed PKI
 - **A default StorageClass** — PVCs are provisioned automatically
 - **Traefik** *(optional)* — required only if `ingress.enabled: true`
+- **CloudNativePG operator** *(optional)* — required only if `keycloak.enabled: true`
+
+---
+
+## MFA and compliance requirements
+
+Wazuh's built-in authentication (username/password stored as bcrypt hashes in OpenSearch) does not support multi-factor authentication. For environments subject to compliance frameworks that mandate MFA — such as ISO 27001, SOC 2, or NIS2 — the default auth is not sufficient on its own.
+
+**Adding Keycloak as an OIDC identity provider is the recommended path to MFA.** Keycloak supports TOTP, WebAuthn, and integration with external identity providers (Entra ID, Okta, Google Workspace). Once Keycloak is in place, users log in through Keycloak's login page and the Wazuh Dashboard accepts the resulting OIDC token — the internal OpenSearch user database is only used by internal service accounts.
+
+This chart includes a built-in Keycloak integration. See the [Keycloak section](#keycloak-oidc-identity-provider) below.
 
 ---
 
@@ -132,6 +143,68 @@ kubectl port-forward -n wazuh svc/wazuh 55000:55000
 
 ---
 
+## Keycloak OIDC identity provider
+
+Setting `keycloak.enabled: true` deploys Keycloak backed by a CloudNativePG PostgreSQL cluster and wires it into the Wazuh Dashboard as an OpenID Connect identity provider. Users log in via Keycloak; the internal OpenSearch user database is only used by service accounts.
+
+This is the recommended setup for any environment where MFA is required.
+
+### Prerequisites
+
+Install the [CloudNativePG operator](https://cloudnative-pg.io/documentation/current/installation_upgrade/) in the cluster before enabling Keycloak:
+
+```bash
+kubectl apply --server-side -f \
+  https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.24/releases/cnpg-1.24.0.yaml
+```
+
+### Enabling Keycloak
+
+Add to your values file:
+
+```yaml
+keycloak:
+  enabled: true
+  tag: "23.0.6"
+  realm: wazuh
+  clientSecret: "CHANGE_ME"      # set to a random string, copy into Keycloak client later
+  admin:
+    username: admin
+    password: "CHANGE_ME"
+  db:
+    name: keycloak
+    username: keycloak
+    password: "CHANGE_ME"
+    storageSize: 10Gi
+```
+
+On first install, Keycloak imports a pre-seeded realm (`wazuh`) containing:
+
+- A `wazuh` OIDC client configured for the dashboard
+- A `groups` scope that passes group membership as an OIDC claim
+- Three groups: `admin`, `security_analytics_full_access`, `security_analytics_read_access`
+
+Keycloak is exposed at `https://<ingress.host>/auth`. The Wazuh Dashboard at `https://<ingress.host>` redirects unauthenticated users there automatically.
+
+### Post-install: create your first user
+
+1. Open `https://<ingress.host>/auth` and log in with the admin credentials from values
+2. Switch to the `wazuh` realm
+3. Create a user under **Users** and assign them to the `admin` group
+4. Enable an MFA credential (TOTP or WebAuthn) under the user's **Credentials** tab
+5. Log out, then open `https://<ingress.host>` — you should be redirected to Keycloak and prompted for MFA
+
+### Connecting an external identity provider
+
+To use Entra ID, Okta, or Google Workspace instead of local Keycloak users:
+
+1. In the `wazuh` realm, go to **Identity Providers** and add your provider
+2. Map the provider's groups or roles to the Keycloak groups above using **Identity Provider Mappers**
+
+Users from the external IdP then log in through Keycloak, which handles MFA enforcement according to the realm's authentication flows.
+
+---
+
 ## Values Reference
 
 ### Image
@@ -226,6 +299,25 @@ The Wazuh Dashboard can be exposed publicly via a Traefik Ingress with TLS termi
 | `ingress.host` | `wazuh.example.com` | Hostname for the dashboard Ingress rule and TLS SAN |
 | `ingress.clusterIssuer` | `letsencrypt-prod` | cert-manager `ClusterIssuer` name used to issue the public TLS certificate |
 | `ingress.tlsSecretName` | `wazuh-dashboard-ingress-tls` | Name of the Secret cert-manager creates to store the TLS keypair |
+
+### Keycloak
+
+| Value | Default | Description |
+|---|---|---|
+| `keycloak.enabled` | `false` | Deploy Keycloak and configure the dashboard for OIDC login |
+| `keycloak.tag` | `"23.0.6"` | Keycloak image tag |
+| `keycloak.realm` | `wazuh` | Keycloak realm name — must match the auto-imported realm JSON |
+| `keycloak.clientSecret` | `"CHANGE_ME"` | OIDC client secret shared between Keycloak and the dashboard |
+| `keycloak.admin.username` | `admin` | Keycloak master realm admin username |
+| `keycloak.admin.password` | `"CHANGE_ME"` | Keycloak master realm admin password |
+| `keycloak.db.name` | `keycloak` | PostgreSQL database name |
+| `keycloak.db.username` | `keycloak` | PostgreSQL user |
+| `keycloak.db.password` | `"CHANGE_ME"` | PostgreSQL password |
+| `keycloak.db.storageSize` | `10Gi` | PVC size for the CNPG PostgreSQL cluster |
+| `keycloak.resources.requests.cpu` | `200m` | CPU request for the Keycloak pod |
+| `keycloak.resources.requests.memory` | `512Mi` | Memory request for the Keycloak pod |
+| `keycloak.resources.limits.cpu` | `1000m` | CPU limit for the Keycloak pod |
+| `keycloak.resources.limits.memory` | `1Gi` | Memory limit for the Keycloak pod |
 
 ---
 
