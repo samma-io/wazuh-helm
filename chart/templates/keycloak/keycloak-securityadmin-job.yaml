@@ -22,7 +22,7 @@ spec:
             - sh
             - -c
             - |
-              until curl -sk https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200 -u '{{ .Values.credentials.indexer.username }}:{{ .Values.credentials.indexer.password }}' | grep -q '"status"'; do
+              until curl -sk https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200 -u '{{ .Values.credentials.indexer.username }}:{{ .Values.credentials.indexer.password }}' | grep -q '"tagline"'; do
                 echo "Waiting for wazuh-indexer..."
                 sleep 10
               done
