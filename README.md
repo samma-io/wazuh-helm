@@ -306,6 +306,7 @@ The Wazuh Dashboard can be exposed publicly via a Traefik Ingress with TLS termi
 |---|---|---|
 | `keycloak.enabled` | `false` | Deploy Keycloak and configure the dashboard for OIDC login |
 | `keycloak.tag` | `"23.0.6"` | Keycloak image tag |
+| `keycloak.path` | `"/login"` | URL path prefix Keycloak is served under. All traffic under this path goes to Keycloak |
 | `keycloak.realm` | `wazuh` | Keycloak realm name — must match the auto-imported realm JSON |
 | `keycloak.clientSecret` | `"CHANGE_ME"` | OIDC client secret shared between Keycloak and the dashboard |
 | `keycloak.admin.username` | `admin` | Keycloak master realm admin username |

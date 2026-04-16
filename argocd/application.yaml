@@ -92,6 +92,7 @@ spec:
         keycloak:
           enabled: true
           tag: "23.0.6"
+          path: "/login"
           realm: wazuh
           clientSecret: "2nZSzY93xS4fVjycngVfcYDp0nKdnFao"
           admin:

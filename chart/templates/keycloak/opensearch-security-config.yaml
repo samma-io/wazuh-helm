@@ -39,7 +39,7 @@ data:
               config:
                 subject_key: preferred_username
                 roles_key: groups
-                openid_connect_url: "http://keycloak.{{ .Release.Namespace }}.svc/auth/realms/{{ .Values.keycloak.realm }}/.well-known/openid-configuration"
+                openid_connect_url: "http://keycloak.{{ .Release.Namespace }}.svc{{ .Values.keycloak.path }}/realms/{{ .Values.keycloak.realm }}/.well-known/openid-configuration"
                 required_audience: wazuh
             authentication_backend:
               type: noop

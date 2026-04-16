@@ -38,11 +38,11 @@ spec:
             - name: KC_HTTP_ENABLED
               value: "true"
             - name: KC_HTTP_RELATIVE_PATH
-              value: "/auth"
+              value: {{ .Values.keycloak.path | quote }}
             - name: KC_HOSTNAME
               value: {{ .Values.ingress.host | quote }}
             - name: KC_HOSTNAME_PATH
-              value: "/auth"
+              value: {{ .Values.keycloak.path | quote }}
             - name: KC_PROXY
               value: "edge"
             - name: KC_HOSTNAME_STRICT
@@ -64,14 +64,14 @@ spec:
               name: http
           readinessProbe:
             httpGet:
-              path: /auth/health/ready
+              path: {{ .Values.keycloak.path }}/health/ready
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 10
           livenessProbe:
             httpGet:
-              path: /auth/health/live
+              path: {{ .Values.keycloak.path }}/health/live
               port: 8080
             initialDelaySeconds: 60
             periodSeconds: 30

@@ -93,6 +93,8 @@ keycloak:
   enabled: false
   image: quay.io/keycloak/keycloak
   tag: "23.0.6"
+  # URL path prefix Keycloak is served under — all traffic under this path goes to Keycloak
+  path: "/login"
   # realm used in OpenID connect URLs
   realm: wazuh
   # clientSecret for the 'wazuh' OIDC client — seeded into Keycloak on first boot
