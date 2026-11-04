@@ -28,6 +28,7 @@ spec:
   ca:
     secretName: wazuh-rootca-certificate
 ---
+{{- if not (include "wazuh.collector" .) }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -69,6 +70,7 @@ spec:
   issuerRef:
     name: wazuh-rootca-issuer
     kind: Issuer
+{{- end }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -104,6 +106,7 @@ spec:
     name: wazuh-rootca-issuer
     kind: Issuer
 ---
+{{- if not (include "wazuh.collector" .) }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -120,3 +123,4 @@ spec:
   issuerRef:
     name: wazuh-rootca-issuer
     kind: Issuer
+{{- end }}

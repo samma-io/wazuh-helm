@@ -1,6 +1,17 @@
 wazuh:
   tag: "4.14.0"
 
+# default:   manager, worker, indexer and dashboard.
+# collector: manager and worker only. No indexer, dashboard, Keycloak or Filebeat,
+#            so there is no Wazuh dashboard, vulnerability detection or search in
+#            Wazuh. Requires keycloak.enabled=false and ingress.enabled=false.
+mode: default
+
+# false removes the NodePort Services and makes wazuh-workers a ClusterIP, leaving
+# the manager reachable from inside the cluster only.
+services:
+  external: true
+
 # Set to true to have Helm create the namespace (alternative to --create-namespace flag)
 createNamespace: false
 
@@ -73,6 +84,7 @@ dashboard:
   serviceType: ClusterIP
 
 ingestAgent:
+  enabled: true
   image: ghcr.io/samma-io/wazuh-agent
   tag: "main"
   replicas: 3

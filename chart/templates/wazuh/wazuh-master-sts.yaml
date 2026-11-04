@@ -49,6 +49,7 @@ spec:
         - name: wazuh-manager
           image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
           env:
+{{- if not (include "wazuh.collector" .) }}
             - name: INDEXER_URL
               value: https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200
             - name: INDEXER_USERNAME
@@ -63,6 +64,7 @@ spec:
               value: /etc/ssl/filebeat.pem
             - name: SSL_KEY
               value: /etc/ssl/filebeat.key
+{{- end }}
             - name: API_USERNAME
               value: {{ .Values.credentials.api.username | quote }}
             - name: API_PASSWORD
@@ -107,6 +109,7 @@ spec:
             - name: wazuh-manager-master
               subPath: wodles
               mountPath: /var/ossec/wodles
+{{- if not (include "wazuh.collector" .) }}
             - name: wazuh-manager
               mountPath: /etc/ssl/filebeat.key
               subPath: tls.key
@@ -119,6 +122,13 @@ spec:
               mountPath: /etc/ssl/root-ca.pem
               subPath: ca.crt
               readOnly: true
+{{- else }}
+            # Replaces the image's s6 service so the manager runs without a shipper.
+            - name: collector-service
+              mountPath: /etc/services.d/filebeat/run
+              subPath: run
+              readOnly: true
+{{- end }}
           ports:
             - containerPort: 1515
               name: registration
@@ -137,12 +147,19 @@ spec:
       - name: wazuh-register-key
         configMap:
           name: wazuh-register-key
+{{- if not (include "wazuh.collector" .) }}
       - name: wazuh-manager
         secret:
           secretName: wazuh-manager
       - name: wazuh-root
         secret:
           secretName: wazuh-rootca-certificate
+{{- else }}
+      - name: collector-service
+        configMap:
+          name: wazuh-manager-collector-service
+          defaultMode: 0755
+{{- end }}
       - name: wazuh-alerts
         emptyDir: {}
 ---

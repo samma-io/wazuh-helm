@@ -34,3 +34,27 @@ resources:
   requests:
     storage: {{ .component.size }}
 {{- end }}
+
+{{/*
+"true" in collector mode, empty otherwise. Use with: if (include "wazuh.collector" .)
+*/}}
+{{- define "wazuh.collector" -}}
+{{- if eq .Values.mode "collector" -}}true{{- end -}}
+{{- end }}
+
+{{/*
+Rejects value combinations the chart cannot render sensibly.
+*/}}
+{{- define "wazuh.validate" -}}
+{{- if not (has .Values.mode (list "default" "collector")) -}}
+{{- fail (printf "mode must be 'default' or 'collector', got '%s'" .Values.mode) -}}
+{{- end -}}
+{{- if include "wazuh.collector" . -}}
+{{- if .Values.keycloak.enabled -}}
+{{- fail "mode=collector has no dashboard to log into: set keycloak.enabled=false" -}}
+{{- end -}}
+{{- if .Values.ingress.enabled -}}
+{{- fail "mode=collector has no dashboard to route to: set ingress.enabled=false" -}}
+{{- end -}}
+{{- end -}}
+{{- end }}

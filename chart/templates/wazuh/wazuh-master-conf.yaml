@@ -24,7 +24,7 @@ data:
         <jsonout_output>yes</jsonout_output>
         <alerts_log>yes</alerts_log>
         <logall>no</logall>
-        <logall_json>no</logall_json>
+        <logall_json>{{ if (include "wazuh.collector" .) }}yes{{ else }}no{{ end }}</logall_json>
         <email_notification>no</email_notification>
         <smtp_server>smtp.example.wazuh.com</smtp_server>
         <email_from>wazuh@example.wazuh.com</email_from>
@@ -117,13 +117,14 @@ data:
       </sca>
 
       <vulnerability-detection>
-        <enabled>yes</enabled>
+        <enabled>{{ if (include "wazuh.collector" .) }}no{{ else }}yes{{ end }}</enabled>
         <index-status>yes</index-status>
         <feed-update-interval>60m</feed-update-interval>
       </vulnerability-detection>
 
       <indexer>
-        <enabled>yes</enabled>
+        <enabled>{{ if (include "wazuh.collector" .) }}no{{ else }}yes{{ end }}</enabled>
+{{- if not (include "wazuh.collector" .) }}
         <hosts>
           <host>https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200</host>
         </hosts>
@@ -134,6 +135,7 @@ data:
           <certificate>/etc/ssl/filebeat.pem</certificate>
           <key>/etc/ssl/filebeat.key</key>
         </ssl>
+{{- end }}
       </indexer>
 
       <!-- File integrity monitoring -->

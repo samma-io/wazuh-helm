@@ -1,5 +1,6 @@
 # Wazuh master Service: API and registration (authd)
 
+{{ if .Values.services.external -}}
 apiVersion: v1
 kind: Service
 metadata:
@@ -21,6 +22,7 @@ spec:
       port: 55000
       targetPort: 55000
 ---
+{{- end }}
 apiVersion: v1
 kind: Service
 metadata:
