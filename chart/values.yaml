@@ -31,6 +31,11 @@ collector:
 # the manager reachable from inside the cluster only.
 services:
   external: true
+  # Opens only what an agent needs, without the API that external exposes.
+  agentNodePorts:
+    enabled: false
+    enroll: 30515
+    events: 30514
 
 # Set to true to have Helm create the namespace (alternative to --create-namespace flag)
 createNamespace: false

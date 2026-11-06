@@ -49,3 +49,8 @@ jobs:
         uses: WyriHaximus/github-action-helm3@v3
         with:
           exec: helm template wazuh chart/ --namespace custom-ns
+
+      - name: Template - v2 collector
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: helm template wazuh-collector chart/ --namespace samma -f chart/values-collector-v2.yaml
