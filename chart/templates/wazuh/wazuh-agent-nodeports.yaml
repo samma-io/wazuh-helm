@@ -1,0 +1,44 @@
+# Agent access on fixed NodePorts: enrollment to the master, events to the worker.
+# Deliberately leaves out the Wazuh API (55000), unlike services.external.
+
+{{- if .Values.services.agentNodePorts.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-agent-enroll
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
+    app: wazuh-manager
+spec:
+  type: NodePort
+  selector:
+    app: wazuh-manager
+    node-type: master
+  ports:
+    - name: registration
+      protocol: TCP
+      port: 1515
+      targetPort: 1515
+      nodePort: {{ .Values.services.agentNodePorts.enroll }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-agent-events
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
+    app: wazuh-manager
+spec:
+  type: NodePort
+  selector:
+    app: wazuh-manager
+    node-type: worker
+  ports:
+    - name: agents-events
+      protocol: TCP
+      port: 1514
+      targetPort: 1514
+      nodePort: {{ .Values.services.agentNodePorts.events }}
+{{- end }}

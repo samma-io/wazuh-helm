@@ -1,0 +1,36 @@
+# The Samma collector as deployed on our v2 cluster: Wazuh manager and worker with
+# no indexer or dashboard, alerts sent to NATS by the Vector sidecar, and agents
+# connecting over NodePorts.
+#
+# This repo is public, so credentials are not here. Pass them from a private file:
+#   helm upgrade wazuh-collector chart/ -n samma \
+#     -f chart/values-collector-v2.yaml -f <private-credentials.yaml>
+# The private file sets credentials.agentRegistration, credentials.clusterKey and
+# credentials.api.username and credentials.api.password.
+mode: collector
+
+collector:
+  logallJson: false
+  vector:
+    enabled: true
+    natsUrl: nats://nats.samma.svc:4222
+
+ingestAgent:
+  enabled: false
+
+ingress:
+  enabled: false
+
+keycloak:
+  enabled: false
+
+persistence:
+  master:
+    size: 20Gi
+  worker:
+    size: 20Gi
+
+services:
+  external: false
+  agentNodePorts:
+    enabled: true
