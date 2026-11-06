@@ -7,6 +7,26 @@ wazuh:
 #            Wazuh. Requires keycloak.enabled=false and ingress.enabled=false.
 mode: default
 
+# Only read when mode is collector.
+collector:
+  # Write every event to logs/archives/archives.json. Nothing deletes these files
+  # yet (wazuh-helm#14), so size the PVC accordingly or turn this off.
+  logallJson: true
+  # Sidecar on each manager: alerts.json -> NATS JetStream.
+  vector:
+    enabled: false
+    image: timberio/vector
+    tag: "0.53.0-distroless-libc"
+    # Required when enabled. A stream must capture the subject, or publishes fail.
+    natsUrl: ""
+    subject: samma.logs.wazuh
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+
 # false removes the NodePort Services and makes wazuh-workers a ClusterIP, leaving
 # the manager reachable from inside the cluster only.
 services:

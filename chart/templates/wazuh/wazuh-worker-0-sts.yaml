@@ -52,6 +52,12 @@ spec:
             mkdir -p /var/ossec/queue/fim/db/;
             mkdir -p /var/ossec/logs/firewall/;
             mkdir -p /var/ossec/logs/archives/;
+{{- if (include "wazuh.collector" .) }}
+            mkdir -p /var/ossec/queue/tasks/;
+{{- end }}
+{{- if (include "wazuh.collectorVector" .) }}
+            mkdir -p /var/ossec/vector/;
+{{- end }}
             echo "#clean" > /var/ossec/etc/shared/ar.conf;
             chown -R wazuh:wazuh /var/ossec/;
         volumeMounts:
@@ -140,6 +146,9 @@ spec:
               name: agents-events
             - containerPort: 1516
               name: cluster
+{{- if (include "wazuh.collectorVector" .) }}
+        {{- include "wazuh.vectorSidecar" (dict "root" . "dataVolume" "wazuh-worker-master") | nindent 8 }}
+{{- end }}
       {{- include "wazuh.nodeSelector" . | nindent 6 }}
       volumes:
         - name: config
@@ -160,6 +169,11 @@ spec:
           configMap:
             name: wazuh-manager-collector-service
             defaultMode: 0755
+{{- if (include "wazuh.collectorVector" .) }}
+        - name: vector-config
+          configMap:
+            name: wazuh-manager-vector
+{{- end }}
 {{- end }}
         - name: wazuh-alerts
           emptyDir: {}
