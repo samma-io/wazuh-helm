@@ -1,3 +1,4 @@
+{{- if .Values.ingestAgent.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -43,3 +44,4 @@ spec:
           resources:
             {{- toYaml .Values.ingestAgent.resources | nindent 12 }}
       {{- include "wazuh.nodeSelector" . | nindent 6 }}
+{{- end }}

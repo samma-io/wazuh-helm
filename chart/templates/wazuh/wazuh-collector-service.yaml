@@ -1,0 +1,16 @@
+{{- if (include "wazuh.collector" .) }}
+# Collector mode has no indexer, so the image's bundled shipper must not run.
+# The service stays up as a no-op: when its run script exits, the image's finish
+# script stops every other service in the container.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wazuh-manager-collector-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
+data:
+  run: |
+    #!/bin/sh
+    exec sleep infinity
+{{- end }}

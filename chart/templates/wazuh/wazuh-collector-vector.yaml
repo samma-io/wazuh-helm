@@ -1,0 +1,66 @@
+{{- if (include "wazuh.collectorVector" .) }}
+# Ships alerts.json to NATS JetStream. acknowledgements plus the disk buffer mean
+# a file position advances only once the record is safely buffered for publish.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wazuh-manager-vector
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
+data:
+  vector.yaml: |
+    data_dir: /var/lib/vector
+    api:
+      enabled: true
+      address: 0.0.0.0:8686
+    acknowledgements:
+      enabled: true
+    sources:
+      wazuh_alerts:
+        type: file
+        include:
+          - /wazuh/alerts/alerts.json
+        read_from: beginning
+    transforms:
+      wazuh_envelope:
+        type: remap
+        inputs:
+          - wazuh_alerts
+        file: /etc/vector/wazuh.vrl
+    sinks:
+      nats_logs_wazuh:
+        type: nats
+        inputs:
+          - wazuh_envelope
+        url: ${NATS_URL}
+        connection_name: wazuh-collector
+        subject: ${WAZUH_LANE_SUBJECT}
+        jetstream: true
+        encoding:
+          codec: json
+        buffer:
+          type: disk
+          max_size: 268435488
+          when_full: block
+  wazuh.vrl: |
+    # One Wazuh alert per record: original fields plus the lane envelope.
+    raw = string!(.message)
+    event_time = now()
+    parsed, parse_err = parse_json(raw)
+    if parse_err != null || !is_object(parsed) {
+      . = {"raw": raw, "format": "bad json"}
+    } else {
+      . = object!(parsed)
+      alert_time, time_err = parse_timestamp(string(.timestamp) ?? "", "%Y-%m-%dT%H:%M:%S%.f%z")
+      if time_err == null {
+        event_time = alert_time
+      }
+      if exists(.full_log) {
+        .search_text = .full_log
+      }
+    }
+    .source = "wazuh"
+    .feed = "alerts"
+    .event_time = format_timestamp!(event_time, "%Y-%m-%dT%H:%M:%S%.3fZ", timezone: "UTC")
+{{- end }}

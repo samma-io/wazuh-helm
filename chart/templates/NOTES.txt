@@ -1,4 +1,9 @@
-Wazuh {{ .Values.wazuh.tag }} deployed to namespace {{ .Release.Namespace }}.
+Wazuh {{ .Values.wazuh.tag }} deployed to namespace {{ .Release.Namespace }} (mode: {{ .Values.mode }}).
+{{- if include "wazuh.collector" . }}
+
+Collector mode: manager and worker only. There is no indexer or dashboard.
+Alerts are written to /var/ossec/logs/alerts/alerts.json on each manager node.
+{{- else }}
 
 Dashboard:
 {{- if .Values.ingress.enabled }}
@@ -7,13 +12,21 @@ Dashboard:
   kubectl port-forward -n {{ .Release.Namespace }} svc/wazuh-dashboard 5601:5601
   Then open: https://localhost:5601
 {{- end }}
+{{- end }}
 
 Manager API:
-  kubectl port-forward -n {{ .Release.Namespace }} svc/wazuh 55000:55000
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ if .Values.services.external }}wazuh{{ else }}wazuh-manager{{ end }} 55000:55000
+{{- if .Values.services.external }}
 
 Agent registration (port 1515) and events (port 1514) are exposed via NodePort
 and LoadBalancer services respectively — these use TCP and cannot go through
 the HTTP Ingress.
+{{- else }}
+
+services.external is false: agent registration (1515) and events (1514) are only
+reachable from inside the cluster, through svc/wazuh-manager and svc/wazuh-workers.
+{{- end }}
+{{- if not (include "wazuh.collector" .) }}
 
 Default credentials (change for production):
   Dashboard: {{ .Values.credentials.dashboard.username }} / <see values>
@@ -23,3 +36,4 @@ NOTE: The OpenSearch internal_users.yml contains pre-computed bcrypt hashes for
 the default passwords. If you change credentials.indexer.password or
 credentials.dashboard.password, you must also update the hashes by running
 securityadmin.sh inside the wazuh-indexer pod.
+{{- end }}

@@ -1,3 +1,4 @@
+{{- if not (include "wazuh.collector" .) }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -152,3 +153,4 @@ metadata:
     app: wazuh-indexer-data
 spec:
   {{- include "wazuh.pvcSpec" (dict "component" .Values.persistence.indexer "storageClass" .Values.persistence.storageClass) | nindent 2 }}
+{{- end }}

@@ -1,3 +1,4 @@
+{{- if not (include "wazuh.collector" .) }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -16,3 +17,4 @@ spec:
     - name: kibana
       port: 5601
       targetPort: 5601
+{{- end }}

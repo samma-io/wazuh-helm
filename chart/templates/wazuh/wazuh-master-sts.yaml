@@ -38,6 +38,12 @@ spec:
             mkdir -p /var/ossec/queue/fim/db/;
             mkdir -p /var/ossec/logs/firewall/;
             mkdir -p /var/ossec/logs/archives/;
+{{- if (include "wazuh.collector" .) }}
+            mkdir -p /var/ossec/queue/tasks/;
+{{- end }}
+{{- if (include "wazuh.collectorVector" .) }}
+            mkdir -p /var/ossec/vector/;
+{{- end }}
             echo "#clean" > /var/ossec/etc/shared/ar.conf;
             chown -R wazuh:wazuh /var/ossec/;
         volumeMounts:
@@ -49,6 +55,7 @@ spec:
         - name: wazuh-manager
           image: wazuh/wazuh-manager:{{ .Values.wazuh.tag }}
           env:
+{{- if not (include "wazuh.collector" .) }}
             - name: INDEXER_URL
               value: https://wazuh-indexer.{{ .Release.Namespace }}.svc:9200
             - name: INDEXER_USERNAME
@@ -63,6 +70,7 @@ spec:
               value: /etc/ssl/filebeat.pem
             - name: SSL_KEY
               value: /etc/ssl/filebeat.key
+{{- end }}
             - name: API_USERNAME
               value: {{ .Values.credentials.api.username | quote }}
             - name: API_PASSWORD
@@ -107,6 +115,7 @@ spec:
             - name: wazuh-manager-master
               subPath: wodles
               mountPath: /var/ossec/wodles
+{{- if not (include "wazuh.collector" .) }}
             - name: wazuh-manager
               mountPath: /etc/ssl/filebeat.key
               subPath: tls.key
@@ -119,6 +128,13 @@ spec:
               mountPath: /etc/ssl/root-ca.pem
               subPath: ca.crt
               readOnly: true
+{{- else }}
+            # Replaces the image's s6 service so the manager runs without a shipper.
+            - name: collector-service
+              mountPath: /etc/services.d/filebeat/run
+              subPath: run
+              readOnly: true
+{{- end }}
           ports:
             - containerPort: 1515
               name: registration
@@ -126,6 +142,9 @@ spec:
               name: cluster
             - containerPort: 55000
               name: api
+{{- if (include "wazuh.collectorVector" .) }}
+        {{- include "wazuh.vectorSidecar" (dict "root" . "dataVolume" "wazuh-manager-master") | nindent 8 }}
+{{- end }}
       {{- include "wazuh.nodeSelector" . | nindent 6 }}
       volumes:
       - name: wazuh-manager-master
@@ -137,12 +156,24 @@ spec:
       - name: wazuh-register-key
         configMap:
           name: wazuh-register-key
+{{- if not (include "wazuh.collector" .) }}
       - name: wazuh-manager
         secret:
           secretName: wazuh-manager
       - name: wazuh-root
         secret:
           secretName: wazuh-rootca-certificate
+{{- else }}
+      - name: collector-service
+        configMap:
+          name: wazuh-manager-collector-service
+          defaultMode: 0755
+{{- if (include "wazuh.collectorVector" .) }}
+      - name: vector-config
+        configMap:
+          name: wazuh-manager-vector
+{{- end }}
+{{- end }}
       - name: wazuh-alerts
         emptyDir: {}
 ---
